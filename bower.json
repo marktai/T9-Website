@@ -18,6 +18,7 @@
   "dependencies": {
     "bootstrap": "^3.3.6",
     "jquery": "^2.2.0",
-    "ng-websocket": "^0.2.1"
+    "ng-websocket": "^0.2.1",
+    "angular-local-storage": "^0.2.3"
   }
 }

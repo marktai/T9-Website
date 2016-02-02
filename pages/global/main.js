@@ -1,4 +1,4 @@
-var defaultPage = "home";
+var defaultPage = "login";
 
 var marktai = new angular.module("marktai", ["ngTouch","ngResource", 'ngRoute', "ngSanitize", "ngWebsocket"]);
 
@@ -8,32 +8,13 @@ marktai.config(function($routeProvider, $locationProvider) {
   $routeProvider
 
     .when('/404', {
-      templateUrl : '/pages/404/404.html',
+      templateUrl : './pages/404/404.html',
       controller : "404Ctl"
     })
 
-    .when('/home', {
-      templateUrl : '/pages/home/home.html',
-      controller : "HomeCtl"
-    })
-
-    .when('/posts', {
-      templateUrl : '/pages/posts/posts.html',
-      controller : "PostsCtl"
-    })
-
-    .when('/about', {
-         templateUrl : '/pages/about/about.html',
-         controller : "AboutCtl"
-    })
-
-    .when('/contact', {
-      templateUrl : '/pages/contact/contact.html',
-      controller : "ContactCtl"
-    })
 
 	.when('/login', {
-			templateUrl : '/pages/login/login.html',
+			templateUrl : './pages/login/login.html',
 			controller : 'LoginCtl',
 	})
 

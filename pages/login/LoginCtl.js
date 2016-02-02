@@ -277,10 +277,10 @@ marktai.controller("LoginCtl", ["$scope", "$rootScope", "$http", "$location", "$
         ws.$close();
     });
 
-    xImg = loadImage("https://www.marktai.com/img/x.png");
+    xImg = loadImage("/img/x.png");
     
-    oImg = loadImage("https://www.marktai.com/img/o.jpg");
-    tealxImg = loadImage("https://www.marktai.com/img/tealx.png");
-    redoImg = loadImage("https://www.marktai.com/img/redo.jpg");
+    oImg = loadImage("/img/o.jpg");
+    tealxImg = loadImage("/img/tealx.png");
+    redoImg = loadImage("/img/redo.jpg");
 
 }])
