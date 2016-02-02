@@ -1,4 +1,4 @@
-marktai.controller("LoginCtl", ["$scope", "$rootScope", "$http", "$location", "$sce", "$q", "$websocket", function($scope, $rootScope, $http, $location, $sce, $q, $websocket) {
+marktai.controller("LoginCtl", ["$scope", "$rootScope", "$http", "$location", "$sce", "$q", "$websocket", "$window", function($scope, $rootScope, $http, $location, $sce, $q, $websocket, $window) {
 	$rootScope.page = "login";
 	
 	$scope.usr = '';
@@ -18,6 +18,12 @@ marktai.controller("LoginCtl", ["$scope", "$rootScope", "$http", "$location", "$
     $scope.players = []
     $scope.boxes = []
     $scope.squares = []
+
+    $scope.boxSize = 50;
+    $scope.spaces = 8;
+
+    $scope.myTurn = false;
+    $scope.whoseTurn = "";
 
 
 
@@ -51,6 +57,7 @@ marktai.controller("LoginCtl", ["$scope", "$rootScope", "$http", "$location", "$
 			$scope.userid = data['UserID'];
 			$scope.secret = data['Secret'];
 			$scope.out = "ID: " + $scope.userid + "| Secret: " + $scope.secret;
+			$scope.getGame();
 		}, function(error){
 			$scope.out = "Login failed.";
 		});
@@ -78,18 +85,32 @@ marktai.controller("LoginCtl", ["$scope", "$rootScope", "$http", "$location", "$
 		})
 		$http.get('/T9/games/' + gameID + '/board').then(function(result){ 
 			$scope.boardArray = result.data["Board"]
-			for (var i = 0; i < 9; i++){
-				for (var j = 0; j < 9; j++) {
-					$scope.loadIcon(i, j);
-				}
-			}
+
 		})
 		$http.get('/T9/games/' + gameID).then(function(result){ 
 			$scope.gameData = result.data["Game"]
     		$scope.players = $scope.gameData["Players"]
-    		$scope.player = $scope.players[Math.floor($scope.gameData["Turn"]/10)] + ""
-    		if ($scope.gameData["Turn"]%10 < 9) {
-	    		$scope.box = $scope.gameData["Turn"]%10 + ""
+    		// $scope.player = $scope.players[Math.floor($scope.gameData["Turn"]/10)] + ""
+    		// if ($scope.gameData["Turn"]%10 < 9) {
+	    	// 	$scope.box = $scope.gameData["Turn"]%10 + ""
+    		// }
+			$scope.loadAllImages();
+
+    		console.log($scope.userid);
+    		var playingPlayer = $scope.players[Math.floor($scope.gameData["Turn"]/10)]
+
+    		console.log(playingPlayer)
+
+    		if ($scope.userid == playingPlayer) {
+    			$scope.myTurn = true;
+    		}
+    		if ($scope.myTurn)
+    		{
+    			$scope.whoseTurn = "Your turn! Go in box " + $scope.gameData["Turn"]%10
+    		}
+    		else
+    		{
+    			$scope.whoseTurn = "Opponent's turn!";
     		}
 		})
 	}
@@ -122,6 +143,7 @@ marktai.controller("LoginCtl", ["$scope", "$rootScope", "$http", "$location", "$
 	$scope.login = function() {
 		login($scope.usr, $scope.pwd);
 		$scope.pwd = '';
+
 	}
 
 	$scope.verifySecret = function() {
@@ -163,35 +185,47 @@ marktai.controller("LoginCtl", ["$scope", "$rootScope", "$http", "$location", "$
 
     $scope.loadIcon = function (box, square) {
 		var canvas  = document.getElementById("box"+box+"-"+square);
+		if (canvas === null) {
+			console.log("derp");
+			return
+		}
 		var context = canvas.getContext("2d");
     	if ($scope.boardArray[box].Squares[square] == 0) {
 			context.clearRect(0, 0, canvas.width, canvas.height);
 		} else if ($scope.boardArray[box].Squares[square] == 1) {
 			xImg.then(function(image){
-				context.drawImage(image, 0, 0);
+				context.drawImage(image, 0, 0, canvas.width, canvas.height);
 			}, function(error){
 				console.log("x failed to load")
 			})
 		} else if ($scope.boardArray[box].Squares[square] == 2) {
 			oImg.then(function(image){
-				context.drawImage(image, 0, 0);
+				context.drawImage(image, 0, 0, canvas.width, canvas.height);
 			}, function(error){
 				console.log("o failed to load")
 			})
 		} else if ($scope.boardArray[box].Squares[square] == 3) {
 			tealxImg.then(function(image){
-				context.drawImage(image, 0, 0);
+				context.drawImage(image, 0, 0, canvas.width, canvas.height);
 			}, function(error){
 				console.log("tealx failed to load")
 			})
 		} else if ($scope.boardArray[box].Squares[square] == 4) {
 			redoImg.then(function(image){
-				context.drawImage(image, 0, 0);
+				context.drawImage(image, 0, 0, canvas.width, canvas.height);
 			}, function(error){
 				console.log("redo failed to load")
 			})
 		}
     }
+
+	$scope.loadAllImages = function() {
+		for (var i = 0; i < 9; i++){
+			for (var j = 0; j < 9; j++) {
+				$scope.loadIcon(i, j);
+			}
+		}
+	}
 
     function loadImage(src) {
         return $q(function(resolve,reject) {
@@ -207,7 +241,28 @@ marktai.controller("LoginCtl", ["$scope", "$rootScope", "$http", "$location", "$
         })
     }
 
-    var ws = $websocket.$new('wss://www.marktai.com/T9/games/' + $scope.gameid + "/ws"); // instance of ngWebsocket, handled by $websocket service
+	$scope.$watch(function(){
+		return $window.innerWidth;
+	}, function(value) {
+		$scope.checkWidth()
+	});
+
+	$scope.checkWidth = function() {
+		if ($window.innerWidth < 650) {
+			$scope.boxSize = 25;
+			$scope.spaces = 2;
+		} else {
+			$scope.boxSize = 50;
+			$scope.spaces = 8;
+		}
+		$scope.loadAllImages();
+	}
+
+	$scope.logWidth = function() {
+		console.log($window.innerWidth);
+	}
+
+    var ws = $websocket.$new({'url': 'wss://www.marktai.com/T9/games/' + $scope.gameid + "/ws", 'protocols': [], 'subprotocols': ['base46']}); // instance of ngWebsocket, handled by $websocket service
 
     ws.$on('$open', function () {
     });
@@ -221,8 +276,6 @@ marktai.controller("LoginCtl", ["$scope", "$rootScope", "$http", "$location", "$
     ws.$on('$close', function () {
         ws.$close();
     });
-
-	$scope.getGame();
 
     xImg = loadImage("https://www.marktai.com/img/x.png");
     
