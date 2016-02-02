@@ -36,16 +36,18 @@
 				</form>
 				
 				<button ng-click="login()" class="btn btn-default">Login</button>
-				<button ng-click="verifySecret()" class="btn btn-default">Verify Secret</button>
+                <button ng-click="verifySecret()" class="btn btn-default">Verify Secret</button>
+				
 
 
-				<p style = "white-space:pre-wrap; word-wrap: break-word" ng-bind='out'></p>
+				<p ng-show = "out && false" style = "white-space:pre-wrap; word-wrap: break-word" ng-bind='out' ></p>
+               <p ng-show = "whoseTurn" style = "white-space:pre-wrap; word-wrap: break-word" ng-bind='whoseTurn'></p>
             </div>
         </div>
-        <div class="row" ng-hide = "id == -1">
-            <div class="col-lg-6 col-md-8">
+        <div class="row" ng-hide = "playerid == -1 || true">
+<!--             <div class="col-lg-6 col-md-8">
                 <p style = "white-space:pre-wrap; font-family: 'Courier New';" ng-bind='board'></p>
-            </div>
+            </div> -->
 
             <div class="col-lg-6 col-md-4">
                 <label> Player: </label>
@@ -72,21 +74,23 @@
         <div ng-bind="error"> </div>
 	</div> 
     <div class="container"
-        style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none;" 
+        style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none; min-width:362px;" 
         unselectable="on"
         onselectstart="return false;" 
         onmousedown="return false;"
         ng-hide = "userid == -1"
+		resize
     >
+        <br>
         <div class = "row">
             <div class = "col-sm-12">
                 <div ng-repeat = "i in [0,1,2]">
                     <div ng-repeat = "j in [0,1,2]"> 
                         <span ng-repeat = "k in [0,1,2]">
                             <span ng-repeat = "m in [0,1,2]">
-                                <canvas id = "box{{3*i + k}}-{{3*j + m}}"  width="50" height="50" style="border:1px solid {{( (3*i + k) % 2) ? 'blue' : 'red'}}" ng-click="canvasClicked({{3*i + k}}, {{3*j + m}})"></canvas>
+                                <canvas id = "box{{3*i + k}}-{{3*j + m}}"  width="{{boxSize}}" height="{{boxSize}}" style="border:1px solid {{( (3*i + k) % 2) ? 'blue' : 'red'}}" ng-click="canvasClicked({{3*i + k}}, {{3*j + m}})"></canvas>
                             </span>
-                            <span ng-bind="$last ? '' : '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'"></span>
+                            <span ng-bind="$last ? '' : '&nbsp;'.repeat(spaces)"></span>
                         </span>
                     </div>
                     <p></p>
