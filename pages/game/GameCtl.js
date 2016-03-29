@@ -1,5 +1,5 @@
-marktai.controller("LoginCtl", ["$scope", "$rootScope", "$http", "$location", "$sce", "$q", "$websocket", "$window", "$localStorage",  function($scope, $rootScope, $http, $location, $sce, $q, $websocket, $window, $localStorage) {
-	$rootScope.page = "login";
+marktai.controller("GameCtl", ["$scope", "$rootScope", "$http", "$location", "$sce", "$q", "$websocket", "$window", "$localStorage", function($scope, $rootScope, $http, $location, $sce, $q, $websocket, $window, $localStorage) {
+	$rootScope.page = "game";
 	
 	$scope.username = '';
 	$scope.password = '';
@@ -8,7 +8,6 @@ marktai.controller("LoginCtl", ["$scope", "$rootScope", "$http", "$location", "$
 	$scope.userid = -1;
 	$scope.secret = '';
 	$scope.expiration = '';
-	$scope.recaptchaResponse = {};
 
 
 	$scope.gameid = $location.hash()
@@ -101,15 +100,17 @@ marktai.controller("LoginCtl", ["$scope", "$rootScope", "$http", "$location", "$
 		if (typeof($localStorage["credentials"]) !== 'undefined') {
 			var storedCreds = $localStorage["credentials"];
 			if ((new Date).getTime() < (new Date(storedCreds['Expiration'])).getTime()) {
-				return verifySecret($localStorage["credentials"]["Username"], $localStorage["credentials"]["Secret"]).then(function(result){
-					return $q.resolve(storedCreds) 
+				verifySecret($localStorage["credentials"]["Username"], $localStorage["credentials"]["Secret"]).then(function(result){
+					$scope.username = storedCreds['Username'];
+					$scope.secret = storedCreds["Secret"];
+					$scope.expiration = storedCreds["Expiration"];
+					$scope.userid = storedCreds["UserID"];
+					$scope.getGame();
 				}, function(error){
 					delete $localStorage["credentials"];
-					return $q.reject("Unverified")
 				})
 			}
 		}
-		return $q.reject("Unverified")
 	}
 
 	var getGame = function(gameID) {
@@ -189,6 +190,7 @@ marktai.controller("LoginCtl", ["$scope", "$rootScope", "$http", "$location", "$
 
 
 		var url = '/T9' + urlWithoutT9;
+		var data = '';
 		var config = {
 			'headers': {
 				'HMAC' : hash,
@@ -196,7 +198,7 @@ marktai.controller("LoginCtl", ["$scope", "$rootScope", "$http", "$location", "$
 				'Time-Sent' : time,
 			}
 		}
-        return $http.get(url, config).then(function(result){
+        return $http.get(url, data, config).then(function(result){
             console.log(result);
             return result;
         }, function(error) {
@@ -217,7 +219,6 @@ marktai.controller("LoginCtl", ["$scope", "$rootScope", "$http", "$location", "$
 
 
 	$scope.getGame = function() {
-		console.log($scope.hi)
 		return getGame($scope.gameid);
 	}
 
@@ -290,6 +291,7 @@ marktai.controller("LoginCtl", ["$scope", "$rootScope", "$http", "$location", "$
     $scope.loadIcon = function (box, square) {
 		var canvas  = document.getElementById("box"+box+"-"+square);
 		if (canvas === null) {
+			console.log("derp");
 			return
 		}
 		var context = canvas.getContext("2d");

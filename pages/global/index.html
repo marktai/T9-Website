@@ -71,6 +71,16 @@
                             <a href="#/login">Login</a>
                         </li>
                     </ul>
+                    <ul class="nav navbar-nav navbar-right">
+                        <li>
+                            <a href="#/register">Register</a>
+                        </li>
+                    </ul>
+                    <ul class="nav navbar-nav navbar-right">
+                        <li>
+                            <a href="#/login">Login</a>
+                        </li>
+                    </ul>
                 </div>
                 <!-- /.navbar-collapse -->
             </div>
@@ -109,13 +119,17 @@
     <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.2/angular-resource.min.js"></script>
 
 	<!-- Websocket Angular Plugin -->
-	<script src="./bower_components/ng-websocket/ng-websocket.js"></script>
+    <script src="./bower_components/ng-websocket/ng-websocket.js"></script>
+	<script src="./bower_components/ngstorage/ngStorage.min.js"></script>
+	<script src="./bower_components/angular-recaptcha/release/angular-recaptcha.min.js"></script>
 
     <!-- Put at end so other pages can set title -->
     <title>Meta Tic Tac Toe</title>
     <script src="./pages/global/main.js"></script>
     <script src="./pages/404/404Ctl.js"></script>
     <script src="./pages/login/LoginCtl.js"></script>
+    <script src="./pages/register/RegisterCtl.js"></script>
+    <script src="./pages/game/GameCtl.js"></script>
 
 
 </body>

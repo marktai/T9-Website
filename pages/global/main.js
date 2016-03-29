@@ -1,6 +1,6 @@
 var defaultPage = "login";
 
-var marktai = new angular.module("marktai", ["ngTouch","ngResource", 'ngRoute', "ngSanitize", "ngWebsocket"]);
+var marktai = new angular.module("marktai", ["ngTouch","ngResource", 'ngRoute', "ngSanitize", "ngWebsocket", "ngStorage", 'vcRecaptcha']);
 
 
 // Sets up default page to be login and redirects every other one to 
@@ -12,11 +12,22 @@ marktai.config(function($routeProvider, $locationProvider) {
       controller : "404Ctl"
     })
 
+    .when('/game',{
 
+      templateUrl : './pages/game/game.html',
+      controller : "GameCtl"
+
+    })
 	.when('/login', {
 			templateUrl : './pages/login/login.html',
 			controller : 'LoginCtl',
 	})
+
+	.when('/register', {
+			templateUrl : './pages/register/register.html',
+			controller : 'RegisterCtl',
+	})
+
 
     // causes no path to go to default page
     .when('', {
@@ -113,14 +124,6 @@ marktai.controller("MainCtl", ["$scope", "$rootScope", "$resource", "$location",
     }
 
   }
-
-
-
-  // returns html bold tezt
-  $rootScope.boldText = function(text) {
-    return "<strong>" + text + "</strong>";
-  }
-  
 
   // returns path==viewlocation
   $rootScope.isActive = function (viewLocation) { 
