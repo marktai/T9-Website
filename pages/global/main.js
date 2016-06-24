@@ -28,6 +28,11 @@ marktai.config(function($routeProvider, $locationProvider) {
 			controller : 'RegisterCtl',
 	})
 
+  .when('/profile', {
+      templateUrl : './pages/profile/profile.html',
+      controller : 'ProfileCtl',
+  })
+
 
     // causes no path to go to default page
     .when('', {
@@ -102,7 +107,7 @@ marktai.directive('resize', function ($window) {
 })
 
 // inject the $resource dependency here
-marktai.controller("MainCtl", ["$scope", "$rootScope", "$resource", "$location",  function($scope, $rootScope, $resource, $location){
+marktai.controller("MainCtl", ["$scope", "$rootScope", "$resource", "$location", "$q", "LoginService", function($scope, $rootScope, $resource, $location, $q, LoginService){
 
   $rootScope.info = "";
   $rootScope.error = "";
@@ -110,19 +115,37 @@ marktai.controller("MainCtl", ["$scope", "$rootScope", "$resource", "$location",
   $rootScope.firstHit = true;
   $rootScope.oldPage = "";
 
-  // does nothing if on a page besides login
-  // if on login, sends to default page
-  $rootScope.SendToPage = function() {
-    page = $rootScope.oldPage;
-    hash = $rootScope.oldHash;
-    if ($rootScope.page == "login") {
-      $rootScope.page = page;
-      $location.path(page);
-      $rootScope.info = "";
-      // console.log("reset in sendtopage")
-      $location.hash(hash);
-    }
+  $rootScope.userid = -1;
+  $rootScope.secret = "";
 
+  $rootScope.username = "";
+  $rootScope.password = "";
+  $rootScope.stayLoggedIn = false;
+
+  $rootScope.sendToLogin = function() {
+	  var redirectMap = {"Path": $location.path(), "Hash": $location.hash()};
+	  $location.hash(JSON.stringify(redirectMap));
+	  $location.path("login");
+  }
+
+  $rootScope.sendFromLogin = function() {
+    var possibleRedirect = $location.hash();
+    if (possibleRedirect != "") {
+      try {
+    	  var redirectMap = JSON.parse($location.hash());
+    	  if (redirectMap["Path"]) {
+    		  $location.path(redirectMap["Path"]);
+    		  if (redirectMap["Hash"]) {
+    			  $location.hash(redirectMap["Hash"]);
+    		  }
+    	  }
+        return // don't want to also send to profile
+      } 
+      catch (err) {
+        ;
+      }
+    }
+    $location.path("profile");
   }
 
   // returns path==viewlocation
@@ -133,7 +156,7 @@ marktai.controller("MainCtl", ["$scope", "$rootScope", "$resource", "$location",
   // returns true if there is a user in local storage
   // user is cleared whenever logged out
   $rootScope.loggedIn = function () {
-    return localStorage.getItem('User') !== null;
+    return LoginService.loggedIn();
   }
 
   // returns input if logged in
@@ -143,6 +166,41 @@ marktai.controller("MainCtl", ["$scope", "$rootScope", "$resource", "$location",
     return "";
   }
 
+
+  $rootScope.login = function() {
+    var temp = $rootScope.password;
+	LoginService.logout();
+    $rootScope.password = '';
+    return LoginService.login($rootScope.username, temp).then(function(creds){
+      $rootScope.userid = creds["UserID"]
+	  $rootScope.secret = creds["Secret"];
+	  return $q.resolve(creds);
+    }, function(error) {
+      $rootScope.error = error
+	  return $q.reject(error);
+    })
+  }
  
+  $rootScope.checkLogin = function() {
+	  return LoginService.checkLocalStorageLogin().then(function(creds) {
+		  $rootScope.username = creds["Username"];
+		  $rootScope.userid = creds["UserID"];
+		  $rootScope.secret = creds["Secret"];
+		  return $q.resolve(creds);
+	  }, function(error) {
+		  LoginService.logout();
+		  return $q.reject(error)
+	  })
+  }
+
+  $rootScope.logout = function() {
+	  $rootScope.username = "";
+	  $rootScope.password = "";
+	  $rootScope.userid = -1;
+	  $rootScope.secret = "";
+	  LoginService.logout();
+	  $location.path("login");
+  }
+
 
 }]);

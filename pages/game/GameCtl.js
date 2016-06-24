@@ -1,24 +1,26 @@
-marktai.controller("GameCtl", ["$scope", "$rootScope", "$http", "$location", "$sce", "$q", "$websocket", "$window", "$localStorage", function($scope, $rootScope, $http, $location, $sce, $q, $websocket, $window, $localStorage) {
+marktai.controller("GameCtl", ["$scope", "$rootScope", "$http", "$location", "$sce", "$q", "$websocket", "$window", "GameService", "LoginService", function($scope, $rootScope, $http, $location, $sce, $q, $websocket, $window, GameService, LoginService) {
 	$rootScope.page = "game";
 	
 	$scope.username = '';
-	$scope.password = '';
-
-	$scope.out = '';
 	$scope.userid = -1;
 	$scope.secret = '';
-	$scope.expiration = '';
 
+	$scope.out = '';
 
-	$scope.gameid = $location.hash()
+	$scope.gameid = ""
 
 	$scope.gameData = {}
     $scope.board = ""
     $scope.boardArray = []
 
     $scope.players = []
+    $scope.player = ''
+
     $scope.boxes = []
+    $scope.box = $scope.boxes[0]
+
     $scope.squares = []
+    $scope.square = $scope.squares[0]
 
     $scope.boxSize = 50;
     $scope.spaces = 8;
@@ -28,9 +30,22 @@ marktai.controller("GameCtl", ["$scope", "$rootScope", "$http", "$location", "$s
 
     $scope.selectedBox = [-1, -1];
 
-    $scope.$storage = $localStorage;
+
+	$scope.games = [];
+
+	$scope.myTurnGames = [];
+	$scope.opponentTurnGames = [];
+	$scope.doneGames = [];
+
+	$scope.opponents = {};
+
+	$scope.player2 = "";
+
+	$scope.chatbox = "";
+	$scope.chats = [];
 
 
+    var ws = null
 
     for (var i = 0; i < 9; i++) {
 		var box = {
@@ -45,9 +60,6 @@ marktai.controller("GameCtl", ["$scope", "$rootScope", "$http", "$location", "$s
     	$scope.squares.push('' + i)
     }
 
-    $scope.player = ''
-    $scope.box = $scope.boxes[0]
-    $scope.square = $scope.squares[0]
 
     var xImg;
     var oImg; 
@@ -55,85 +67,28 @@ marktai.controller("GameCtl", ["$scope", "$rootScope", "$http", "$location", "$s
     var redoImg; 
 
 
-	var login = function(username, pass) {
-		var creds = {"User":username, "Password":pass};
-		$http.post('/T9/login', creds).then(function(result){ 
-			var data = result.data;
-			$scope.userid = data['UserID'];
-			$scope.secret = data['Secret'];
-			$scope.expiration = data['Expiration']
-			$scope.out = "ID: " + $scope.userid + "| Secret: " + $scope.secret;
-
-			var storedCreds = {
-				'Username': username, // user might change the box in the meantime
-				'Secret': data['Secret'],
-				'Expiration': data['Expiration'],
-				'UserID' : data['UserID'],
-			}
-
-
-			$localStorage["credentials"] = storedCreds;
-
-			getUserGames(data['UserID'])
-			$scope.getGame();
-		}, function(error){
-			$scope.out = "Login failed.";
-		});
-	}
-
-
-	var verifySecret = function(user, secret) {
-		var creds = {"User":user, "Secret":secret};
-		return $http.post('/T9/verifySecret', creds).then(function(result){ 
-			var data = result.data;
-			$scope.userid = data['UserID'];
-			$scope.secret = data['Secret'];
-			$scope.out = "Verified| ID: " + $scope.userid + "| Secret: " + $scope.secret;
-			return $q.resolve(data["UserID"]);
+	$scope.verifySecret = function() {
+		LoginService.verifySecret($scope.username, $scope.secret).then(function(creds){
+			$scope.userid = creds["UserID"]
+			$scope.secret = creds["Secret"]
 		}, function(error){
 			$scope.out = "Verification failed.";
-			return $q.reject("Unverified");
 		});
 	}
 
-	var checkLocalStorageLogin = function() {
-		if (typeof($localStorage["credentials"]) !== 'undefined') {
-			var storedCreds = $localStorage["credentials"];
-			if ((new Date).getTime() < (new Date(storedCreds['Expiration'])).getTime()) {
-				verifySecret($localStorage["credentials"]["Username"], $localStorage["credentials"]["Secret"]).then(function(result){
-					$scope.username = storedCreds['Username'];
-					$scope.secret = storedCreds["Secret"];
-					$scope.expiration = storedCreds["Expiration"];
-					$scope.userid = storedCreds["UserID"];
-					$scope.getGame();
-				}, function(error){
-					delete $localStorage["credentials"];
-				})
-			}
-		}
-	}
-
-	var getGame = function(gameID) {
-		$http.get('/T9/games/' + gameID + '/string').then(function(result){ 
-			$scope.board = ""
-			var boardArray = result.data["Board"]
-            for (line of boardArray) {
-                $scope.board += line + "\n"
-            }
-		})
-		$http.get('/T9/games/' + gameID + '/board').then(function(result){ 
-			$scope.boardArray = result.data["Board"]
+	$scope.getGame = function() {
+		GameService.getGame($scope.gameid).then(function(results){
+			$scope.boardArray = results[0];
 			$scope.loadAllImages();
 
-		})
-		$http.get('/T9/games/' + gameID).then(function(result){ 
-			$scope.gameData = result.data["Game"]
+
+			$scope.gameData = results[1];
     		$scope.players = $scope.gameData["Players"]
-    		// $scope.player = $scope.players[Math.floor($scope.gameData["Turn"]/10)] + ""
-    		// if ($scope.gameData["Turn"]%10 < 9) {
-	    	// 	$scope.box = $scope.gameData["Turn"]%10 + ""
-    		// }
+    		$scope.playerNames = $scope.gameData["PlayerNames"]
+
     		var playingPlayer = $scope.players[Math.floor($scope.gameData["Turn"]/10)]
+			var playingPlayerName = $scope.playerNames[Math.floor($scope.gameData["Turn"]/10)]
+
 
     		if ($scope.userid == playingPlayer) {
     			$scope.myTurn = true;
@@ -141,85 +96,49 @@ marktai.controller("GameCtl", ["$scope", "$rootScope", "$http", "$location", "$s
     			$scope.myTurn = false;
     		} 
 
-    		if ($scope.gameData["Turn"] > 20) {
+    		if ($scope.gameData["Turn"] >= 20) {
     			$scope.whoseTurn = "Game finished.  " + (($scope.gameData["Turn"] - 20 == 1) ? "X" : "O") + " wins!"
     		}
     		else if ($scope.myTurn == 1)
     		{
-    			$scope.whoseTurn = "Your turn! Go in box " + $scope.gameData["Turn"]%10
+    			$scope.whoseTurn = "Your turn!"
+				var box = $scope.gameData["Turn"]%10;
+			    if (box == 9) {
+					$scope.whoseTurn += " Go in any box.";
+				}
+				else {
+					$scope.whoseTurn += " Go in the ";
+					var row = Math.floor(box / 3);
+					var col = box % 3;
+
+					if (row == 0) {
+						$scope.whoseTurn += "top";
+					} else if (row == 1) {
+						$scope.whoseTurn += "middle";
+					} else {
+						$scope.whoseTurn += "bottom";
+					}
+					$scope.whoseTurn += "-";
+
+					if (col == 0) {
+						$scope.whoseTurn += "left";
+					} else if (col == 1) {
+						$scope.whoseTurn += "middle";
+					} else {
+						$scope.whoseTurn += "right";
+					}
+					
+					$scope.whoseTurn += " box.";
+				}
     		}
     		else if ($scope.myTurn == 0)
-    		{
-    			$scope.whoseTurn = "Opponent's turn!";
-    		} else if ($scope.myTurn = 2) {
+    		{	
+    			$scope.whoseTurn = playingPlayerName + "'s turn!";
     		}
-		})
-	}
 
-    var makeMove = function(game, player, box, square) {
-
-    	var time = Math.floor(Date.now() / 1000);
-		var urlWithoutT9 = '/games/' + game + '?Player=' + player + '&Box=' + box + '&Square=' + square;
-    	var message = time + ":" + urlWithoutT9;
-		var hash = CryptoJS.HmacSHA256(message, $scope.secret);
-		// var hashInBase64 = CryptoJS.enc.Base64.stringify(hash);
-
-
-		var url = '/T9' + urlWithoutT9;
-		var data = '';
-		var config = {
-			'headers': {
-				'HMAC' : hash,
-				'Encoding' : 'hex',
-				'Time-Sent' : time,
-			}
-		}
-        return $http.post(url, data, config).then(function(result){
-            return result;
-        }, function(error) {
-            $scope.error = error.data["Error"]
-            return error;
-        })
-    }
-    var getUserGames = function(userID) {
-
-    	var time = Math.floor(Date.now() / 1000);
-		var urlWithoutT9 = '/users/' + userID + "/games" 
-    	var message = time + ":" + urlWithoutT9;
-		var hash = CryptoJS.HmacSHA256(message, $scope.secret);
-
-
-		var url = '/T9' + urlWithoutT9;
-		var data = '';
-		var config = {
-			'headers': {
-				'HMAC' : hash,
-				'Encoding' : 'hex',
-				'Time-Sent' : time,
-			}
-		}
-        return $http.get(url, data, config).then(function(result){
-            console.log(result);
-            return result;
-        }, function(error) {
-            $scope.error = error.data["Error"]
-            return error;
-        })
-    }
-
-	$scope.login = function() {
-		var temp = $scope.password;
-		$scope.password = '';
-		return login($scope.username, temp);
-	}
-
-	$scope.verifySecret = function() {
-		return verifySecret($scope.username, $scope.secret);
-	}
-
-
-	$scope.getGame = function() {
-		return getGame($scope.gameid);
+		}, function(error){
+			$scope.error = error;
+		});
 	}
 
 	$scope.refresh = function() {
@@ -232,23 +151,40 @@ marktai.controller("GameCtl", ["$scope", "$rootScope", "$http", "$location", "$s
 
     $scope.makeMove = function(box, square) {
     	$scope.error = '';
-    	return makeMove($scope.gameid, $scope.userid, box, square);
+    	return GameService.makeMove($scope.gameid, $scope.userid, $scope.secret, box, square).then(function(result){
+    		// automatically updates on change with ws
+    		return $q.resolve(result);
+    	}, function(error){
+    		$scope.error = error
+    		return $q.reject(error)
+    	});
     }
+
+    $scope.sendChat = function() {
+    	try {
+	    	GameService.sendChat($scope.chatbox);
+	    	$scope.chatbox = "";
+    	}
+    	catch (err) {
+    		console.log(err);
+    	}
+    }
+
 
     $scope.canvasClicked = function(box, square) {
 
 		if ($scope.userid == $scope.gameData.Players[0] && ($scope.gameData.Turn == box || $scope.gameData.Turn == 9)) {
 			if($scope.boardArray[box].Squares[square] == 0) {
-				$scope.boardArray[box].Squares[square] = 3;
+				$scope.boardArray[box].Squares[square] = 4;
 				if ($scope.selectedBox[0] !== -1 && $scope.selectedBox[1] !== -1) {
-					if ($scope.boardArray[$scope.selectedBox[0]].Squares[$scope.selectedBox[1]] == 3) {
+					if ($scope.boardArray[$scope.selectedBox[0]].Squares[$scope.selectedBox[1]] == 4) {
 						$scope.boardArray[$scope.selectedBox[0]].Squares[$scope.selectedBox[1]] = 0;
 						$scope.loadIcon($scope.selectedBox[0], $scope.selectedBox[1])
 					}
 				}
 				$scope.selectedBox = [box, square];
 			}
-			else if ($scope.boardArray[box].Squares[square] == 3) {
+			else if ($scope.boardArray[box].Squares[square] == 4) {
 				$scope.boardArray[box].Squares[square] = 1;
 	    		$scope.makeMove(box, square).then(function(result){
             		$scope.getGame()
@@ -262,16 +198,16 @@ marktai.controller("GameCtl", ["$scope", "$rootScope", "$http", "$location", "$s
 		}
 		if ($scope.userid == $scope.gameData.Players[1] && ($scope.gameData.Turn == 10 + box || $scope.gameData.Turn == 19)) {
 			if($scope.boardArray[box].Squares[square] == 0) {
-				$scope.boardArray[box].Squares[square] = 4;
+				$scope.boardArray[box].Squares[square] = 5;
 				if ($scope.selectedBox[0] !== -1 && $scope.selectedBox[1] !== -1) {
-					if ($scope.boardArray[$scope.selectedBox[0]].Squares[$scope.selectedBox[1]] == 4) {
+					if ($scope.boardArray[$scope.selectedBox[0]].Squares[$scope.selectedBox[1]] == 5) {
 						$scope.boardArray[$scope.selectedBox[0]].Squares[$scope.selectedBox[1]] = 0;
 						$scope.loadIcon($scope.selectedBox[0], $scope.selectedBox[1])
 					}
 				}
 				$scope.selectedBox = [box, square];
 			}
-			else if ($scope.boardArray[box].Squares[square] == 4) {
+			else if ($scope.boardArray[box].Squares[square] == 5) {
 				$scope.boardArray[box].Squares[square] = 2;
 	    		$scope.makeMove(box, square).then(function(result){
             		$scope.getGame()
@@ -283,7 +219,6 @@ marktai.controller("GameCtl", ["$scope", "$rootScope", "$http", "$location", "$s
 				});
 			}
 		}
-		console.log($scope.boardArray[box].Squares[square])
 
 		return $scope.loadIcon(box, square);
     }
@@ -291,7 +226,6 @@ marktai.controller("GameCtl", ["$scope", "$rootScope", "$http", "$location", "$s
     $scope.loadIcon = function (box, square) {
 		var canvas  = document.getElementById("box"+box+"-"+square);
 		if (canvas === null) {
-			console.log("derp");
 			return
 		}
 		var context = canvas.getContext("2d");
@@ -309,17 +243,17 @@ marktai.controller("GameCtl", ["$scope", "$rootScope", "$http", "$location", "$s
 			}, function(error){
 				console.log("o failed to load")
 			})
-		} else if ($scope.boardArray[box].Squares[square] == 3) {
+		} else if ($scope.boardArray[box].Squares[square] == 4) {
 			tealxImg.then(function(image){
 				context.drawImage(image, 0, 0, canvas.width, canvas.height);
 			}, function(error){
-				console.log("tealx failed to load")
+				console.log("teal_x failed to load")
 			})
-		} else if ($scope.boardArray[box].Squares[square] == 4) {
+		} else if ($scope.boardArray[box].Squares[square] == 5) {
 			redoImg.then(function(image){
 				context.drawImage(image, 0, 0, canvas.width, canvas.height);
 			}, function(error){
-				console.log("redo failed to load")
+				console.log("red_o failed to load")
 			})
 		}
 		// console.log("drew" + box + ", " + square);
@@ -338,7 +272,6 @@ marktai.controller("GameCtl", ["$scope", "$rootScope", "$http", "$location", "$s
             var image = new Image();
             image.src = src;
             image.onload = function() {
-              console.log("loaded image: "+src);
               resolve(image);
             };
             image.onerror = function(e) {
@@ -365,26 +298,59 @@ marktai.controller("GameCtl", ["$scope", "$rootScope", "$http", "$location", "$s
 	}
 
 
-    var ws = $websocket.$new({'url': 'wss://www.marktai.com/T9/games/' + $scope.gameid + "/ws", 'protocols': [], 'subprotocols': ['base46']}); // instance of ngWebsocket, handled by $websocket service
+	$scope.populateScope = function() {
+		$scope.gameid = $location.hash()
+		if ($scope.gameid == "") {
+			$location.path('/login')
+			return $q.reject("No ID")
+		}
 
-    ws.$on('$open', function () {
-    });
 
-    ws.$on('Change', function (data) {
-        console.log(data);
-        $scope.getGame();
+		LoginService.checkLocalStorageLogin().then(function(creds){
+			$scope.username = creds["Username"];
+			$scope.secret = creds["Secret"];
+			$scope.userid = creds["UserID"]
 
-    })
+		    GameService.initws(
+		    	$scope.gameid,
+		    	function(data){
+		    		console.log("websocket opened");
+		    	}, // open
+		    	function(data){
+		    		console.log("websocket closed");
+		    	}, // close
+		    	function(data){
+		    		console.log("game updated due to websocket update")
+		    		$scope.getGame();
+		    	}, // change
+		    	function(data){
+		    		$scope.chats.push(data);
+		    		$scope.$apply()
+		    		console.log(data);
+		    	} // chat
+		    )
+			$scope.refresh()
+		}, function(error) {
+			$location.path('/login')
+			return $q.reject("No Login")
+		})
+	}
 
-    ws.$on('$close', function () {
-        ws.$close();
-    });
 
-    xImg = loadImage("/img/x.png");
-    oImg = loadImage("/img/o.jpg");
-    tealxImg = loadImage("/img/tealx.png");
-    redoImg = loadImage("/img/redo.jpg");
 
-    checkLocalStorageLogin();
+	xImg = loadImage("/img/x.png");
+	oImg = loadImage("/img/o.jpg");
+	tealxImg = loadImage("/img/tealx.png");
+	redoImg = loadImage("/img/redo.jpg");
+
+
+
+	$rootScope.checkLogin().then(
+		function(creds){$scope.populateScope()},
+		function(error){
+			$rootScope.sendToLogin();
+		}
+	);
+
 
 }])

@@ -1,10 +1,13 @@
 <!-- hmac-sha256 library -->
-<script src="https://crypto-js.googlecode.com/svn/tags/3.0.2/build/rollups/hmac-sha256.js"></script>
+<script
+  src="https://www.google.com/recaptcha/api.js?onload=vcRecaptchaApiLoaded&render=explicit"
+  async defer
+></script>
 
 
 <!-- Page Header -->
 <!-- Set your background image for this header on the line below. -->
-<header class="intro-header" style="background-image: url('/img/lock-bg.png')">
+<!-- <header class="intro-header" style="background-image: url('https://www.marktai.com/img/lock-bg.png')">
     <div class="container">
         <div class="row">
             <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
@@ -17,64 +20,29 @@
             </div>
         </div>
     </div>
-</header>
+</header> -->
 
 <!-- Post Content -->
 <article>
-    <div class="container">
-        <div class="row">
-            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+    <div class="container-fluid">
+                
+        
 
-				
-
-
-				<p ng-show = "out && false" style = "white-space:pre-wrap; word-wrap: break-word" ng-bind='out' ></p>
-            </div>
-        </div>
-        <div class="row" ng-hide = "playerid == -1 || true">
-            <!--<div class="col-lg-6 col-md-8">
-                <p style = "white-space:pre-wrap; font-family: 'Courier New';" ng-bind='board'></p>
-            </div> -->
-
-            <div class="col-lg-6 col-md-4">
-                <label> Player: </label>
-                <select ng-model="player">
-                    <option ng-repeat="player in players" value="{{player}}">{{player}}</option>
-                </select>
-
-
-                <label> Box: </label>
-                <select ng-model="box">
-                    <option ng-repeat="box in boxes" value="{{box}}">{{box}}</option>
-                </select>
-
-                <label> Square: </label>
-                <select ng-model="square">
-                    <option ng-repeat="square in squares" value="{{square}}">{{square}}</option>
-                </select>
-                <br>
-                <button ng-click='getGame()' class="btn btn-default">Update Game</button>
-                <button ng-click='makeMove()' class="btn btn-default">Make Move</button>
-            </div>
-		</div>
-
-        <div ng-bind="error"> </div>
-	</div> 
+    <div ng-bind="error"> </div>
+    </div> 
     <div class="container"
-        style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none; min-width:362px;" 
-        unselectable="on"
-        onselectstart="return false;" 
-        onmousedown="return false;"
         ng-hide = "userid == -1"
-		resize
+        resize
     >
         <br>
-        <div class = "row">
-            <div class = "col-md-6 col-lg-4">
-                <p ng-show = "whoseTurn" style = "white-space:pre-wrap; word-wrap: break-word" ng-bind='whoseTurn'></p>		
-				<button ng-click="refresh()" class="btn btn-default">Refresh</button>
-            </div>
-            <div class = "col-md-12 col-lg-8">
+        <h1>Game</h1>
+        <div class = "row" >
+            <div class = "col-md-12 col-lg-8" 
+                style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none; min-width:362px;" 
+                unselectable="on"
+                onselectstart="return false;" 
+                onmousedown="return false;"
+            > 
                 <div align= "center">
                     <div ng-repeat = "i in [0,1,2]">
                         <div ng-repeat = "j in [0,1,2]"> 
@@ -88,6 +56,21 @@
                         <p></p>
                     </div>
                 </div>
+            </div>
+            <div class = "col-md-6 col-lg-4">
+                <p ng-show = "whoseTurn" ng-bind='whoseTurn'></p>     
+                <button ng-click="refresh()" class="btn btn-default">Refresh</button>
+                <br><br>
+                
+                <div style="max-height:200px; min-height:40px; border:1px solid #ccc;overflow:auto;">
+                    <h2>Chat</h2>
+                    <hr>
+                    <p style="margin-top:0; margin-bottom:5px" ng-repeat = "chat in chats">{{chat}}</p>
+                </div>
+
+                <input type="text" ng-model="chatbox" ng-enter="sendChat()" id="chat"></input>
+                <button ng-click="sendChat()" ng-disabled="chatbox === ''" class="btn btn-default">Send Chat</button>
+				<br>
             </div>
         </div>
     </div>

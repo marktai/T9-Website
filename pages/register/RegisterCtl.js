@@ -1,40 +1,43 @@
-marktai.controller("RegisterCtl", ["$scope", "$rootScope", "$http", "$location", "$sce", "$q", "$websocket", "$window", "$localStorage", "vcRecaptchaService",  function($scope, $rootScope, $http, $location, $sce, $q, $websocket, $window, $localStorage, vcRecaptchaService) {
+marktai.controller("RegisterCtl", ["$scope", "$rootScope", "$q", "vcRecaptchaService", "LoginService", function($scope, $rootScope, $q, vcRecaptchaService, LoginService) {
 	$rootScope.page = "register";
 	
 	$scope.username = '';
 	$scope.password = '';
 	$scope.verify_password = '';
+	$scope.email = '';
+	$scope.verify_email = '';
 
 	$scope.out = '';
 	$scope.gRecaptcha = {}
 	$scope.gRecaptcha.response = null
 	$scope.widgetId = null;
 
-
-	var register = function(username, pass, recaptchaResponse) {
-		var creds = {"User":username, "Password":pass, "Recaptcha":recaptchaResponse};
-		return $http.post('/T9/users?Secret=thisisatotallysecuresecret', creds).then(function(result){ 
-			return $q.resolve(result.data["UserID"]);
-		}, function(error){
-			var errText = error.data["Error"]
-			return $q.reject(errText)
-		});
-	}
-
 	$scope.register = function() {
 		var retPromise
 		if ($scope.gRecaptcha.response === null || typeof($scope.gRecaptcha.response) === "undefined") {
 			retPromise = $q.reject("Please complete the reCAPTCHA")
 		}
-		else if ($scope.password == $scope.verify_password) {
-			retPromise = register($scope.username, $scope.password, $scope.gRecaptcha.response)
-		}
-		else {
+		else if ($scope.password != $scope.verify_password) {
 			retPromise = $q.reject("Passwords do not match")
 		}
+		else if ($scope.email != $scope.verify_email) {
+			retPromise = $q.reject("Emails do not match")
+		}
+		else{
+			retPromise = LoginService.register($scope.username, $scope.password, $scope.email, $scope.gRecaptcha.response)
+		}
+
+		// retPromise is either immediately rejected due to user error or the promise returned by register
+
+
+		var password = $scope.password;
 		retPromise.then(function(userID){
 			$scope.out = "User successfully created with user ID " + userID
-			// login(username, password)	
+			$rootScope.username = $scope.username;
+			$rootScope.password = password;
+			$rootScope.login();
+			$scope.password = '';
+			$scope.verify_password = '';
 		}, function(error) {
 			if (error == "User already made") {
 				$scope.out = "Username \"" + $scope.username + "\" already taken"
@@ -42,8 +45,6 @@ marktai.controller("RegisterCtl", ["$scope", "$rootScope", "$http", "$location",
 				$scope.out = error
 			}
 		})
-		$scope.password = '';
-		$scope.verify_password = '';
 		$scope.resetRecaptcha();
 		return retPromise
 	}	
@@ -63,4 +64,8 @@ marktai.controller("RegisterCtl", ["$scope", "$rootScope", "$http", "$location",
 	}
 
 
+	$rootScope.checkLogin().then(
+		function(creds){},
+		function(error){}
+	)
 }])

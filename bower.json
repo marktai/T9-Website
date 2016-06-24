@@ -21,6 +21,7 @@
     "ng-websocket": "^0.2.1",
     "angular-local-storage": "^0.2.3",
     "ngstorage": "^0.3.10",
-    "angular-recaptcha": "^2.5.0"
+    "angular-recaptcha": "^2.5.0",
+    "clean-blog": "^1.0.1"
   }
 }
