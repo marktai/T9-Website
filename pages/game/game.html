@@ -35,15 +35,17 @@
         resize
     >
         <br>
-        <h1>Game</h1>
         <div class = "row" >
             <div class = "col-md-12 col-lg-8" 
-                style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none; min-width:362px;" 
-                unselectable="on"
-                onselectstart="return false;" 
-                onmousedown="return false;"
+                style="min-width:362px;" 
             > 
-                <div align= "center">
+        <h1 style="text-align: center">Game</h1>
+                <div align= "center"
+                	style="-moz-user-select: none; -webkit-user-select: none; -ms-user-select:none; user-select:none;-o-user-select:none; min-width:362px;" 
+                	unselectable="on"
+               		onselectstart="return false;" 
+                	onmousedown="return false;"
+		>
                     <div ng-repeat = "i in [0,1,2]">
                         <div ng-repeat = "j in [0,1,2]"> 
                             <span ng-repeat = "k in [0,1,2]">
