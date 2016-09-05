@@ -1,4 +1,4 @@
-marktai.controller("GameCtl", ["$scope", "$rootScope", "$http", "$location", "$sce", "$q", "$websocket", "$window", "GameService", "LoginService", function($scope, $rootScope, $http, $location, $sce, $q, $websocket, $window, GameService, LoginService) {
+marktai.controller("GameCtl", ["$scope", "$rootScope", "$http", "$location", "$sce", "$q", "$websocket", "$window", "$timeout", 'ngAudio', "GameService", "LoginService", "AIService", function($scope, $rootScope, $http, $location, $sce, $q, $websocket, $window, $timeout, ngAudio, GameService, LoginService, AIService) {
     $rootScope.page = "game";
 
     $scope.username = '';
@@ -43,6 +43,14 @@ marktai.controller("GameCtl", ["$scope", "$rootScope", "$http", "$location", "$s
 
     $scope.chatbox = "";
     $scope.chats = [];
+    var notificationSound = null;
+    $scope.muted = false;
+    $scope.focused = true;
+    $scope.newChatName = "";
+
+    $scope.chatTitle = "";
+    $scope.oldTitle = "Meta Tic Tac Toe";
+    $scope.title = $scope.oldTitle;
 
 
     var ws = null
@@ -75,6 +83,8 @@ marktai.controller("GameCtl", ["$scope", "$rootScope", "$http", "$location", "$s
             $scope.out = "Verification failed.";
         });
     }
+
+    $scope.rateGame = AIService.rateGame;
 
     $scope.getGame = function() {
         GameService.getGame($scope.gameid).then(function(results) {
@@ -130,6 +140,14 @@ marktai.controller("GameCtl", ["$scope", "$rootScope", "$http", "$location", "$s
             } else if ($scope.myTurn == 0) {
                 $scope.whoseTurn = playingPlayerName + "'s turn!";
             }
+            if ($scope.username === "me" && $scope.myTurn) {
+                // var move = AIService.generateBestMove({"GameData": $scope.gameData, "BoardArray": $scope.boardArray})
+                // console.log(move);
+                // $scope.makeMove(move[0], move[1]);
+            }
+            var playerReference = ($scope.username === $scope.gameData["PlayerNames"][0]) ? 1 : 2;
+            console.log("player", AIService.rateGame({"GameData": $scope.gameData, "BoardArray": $scope.boardArray}, playerReference))
+            console.log("opponent", AIService.rateGame({"GameData": $scope.gameData, "BoardArray": $scope.boardArray}, 3 - playerReference))
 
         }, function(error) {
             $scope.error = error;
@@ -183,18 +201,20 @@ marktai.controller("GameCtl", ["$scope", "$rootScope", "$http", "$location", "$s
     }
 
     $scope.sendChat = function() {
-        try {
-            GameService.sendChat($scope.chatbox);
-            $scope.chatbox = "";
-        } catch (err) {
-            console.log(err);
+        if ($scope.chatbox) {
+            try {
+                GameService.sendChat($scope.username, $scope.chatbox);
+                $scope.chatbox = "";
+            } catch (err) {
+                console.log(err);
+            }
         }
     }
 
-
     $scope.canvasClicked = function(box, square) {
 
-        if ($scope.userid == $scope.gameData.Players[0] && ($scope.gameData.Turn == box || $scope.gameData.Turn == 9)) {
+        // if ($scope.userid == $scope.gameData.Players[0] && ($scope.gameData.Turn == box || $scope.gameData.Turn == 9)) {
+        if ($scope.userid == $scope.gameData.Players[0]) {
             if ($scope.boardArray[box].Squares[square] == 0) {
                 $scope.boardArray[box].Squares[square] = 4;
                 if ($scope.selectedBox[0] !== -1 && $scope.selectedBox[1] !== -1) {
@@ -216,7 +236,8 @@ marktai.controller("GameCtl", ["$scope", "$rootScope", "$http", "$location", "$s
                 });
             }
         }
-        if ($scope.userid == $scope.gameData.Players[1] && ($scope.gameData.Turn == 10 + box || $scope.gameData.Turn == 19)) {
+        // if ($scope.userid == $scope.gameData.Players[1] && ($scope.gameData.Turn == 10 + box || $scope.gameData.Turn == 19)) {
+        if ($scope.userid == $scope.gameData.Players[1]) {
             if ($scope.boardArray[box].Squares[square] == 0) {
                 $scope.boardArray[box].Squares[square] = 5;
                 if ($scope.selectedBox[0] !== -1 && $scope.selectedBox[1] !== -1) {
@@ -324,7 +345,6 @@ marktai.controller("GameCtl", ["$scope", "$rootScope", "$http", "$location", "$s
             return $q.reject("No ID")
         }
 
-
         LoginService.checkLocalStorageLogin().then(function(creds) {
             $scope.username = creds["Username"];
             $scope.secret = creds["Secret"];
@@ -333,19 +353,34 @@ marktai.controller("GameCtl", ["$scope", "$rootScope", "$http", "$location", "$s
             GameService.initws(
                 $scope.gameid,
                 function(data) {
-                    console.log("websocket opened");
+                    // console.log("websocket opened");
                 }, // open
                 function(data) {
-                    console.log("websocket closed");
+                    // console.log("websocket closed");
                 }, // close
                 function(data) {
-                    console.log("game updated due to websocket update")
+                    // console.log("game updated due to websocket update")
                     $scope.getGame();
                 }, // change
                 function(data) {
-                    $scope.chats.push(data);
-                    $scope.$apply()
-                    console.log(data);
+                    try {
+                        $scope.chats.push(data);
+                        $scope.$apply()
+                        // console.log('Receive chat data: ' + JSON.stringify(data));
+                        if (data["username"] !== $scope.username) {
+                            if (notificationSound && !$scope.muted) {
+                                notificationSound.play();
+                            }
+                        }
+
+                        if (!$scope.focused) {
+                            $scope.newChatName = data["username"];
+                            $scope.startTitleFlash();
+                        }
+
+                    } catch (error) {
+                        console.log('Receive chat error: ' + error);
+                    }
                 } // chat
             )
             $scope.refresh()
@@ -355,8 +390,33 @@ marktai.controller("GameCtl", ["$scope", "$rootScope", "$http", "$location", "$s
         })
     }
 
+    $scope.startTitleFlash = function() {
+        showNewTitle();
+    }
 
+    var showNewTitle = function() {
+        if (!$scope.focused) {
+            $scope.title = $scope.newChatName + " messaged you";
+            $timeout(showOldTitle, 1000);
+        }
+    }
 
+    var showOldTitle = function() {
+        if (!$scope.focused) {
+            $scope.title = $scope.oldTitle;
+            $timeout(showNewTitle, 1000);
+        }
+    }
+
+    angular.element($window).bind('focus', function() {
+        $scope.focused = true;
+        $scope.newChatName = "";
+        $scope.title = $scope.oldTitle;
+    }).bind('blur', function() {
+        $scope.focused = false;
+    });
+
+    notificationSound = ngAudio.load("/sound/notification.mp3")
     xImg = loadImage("/img/x.jpg");
     oImg = loadImage("/img/o.jpg");
     tealxImg = loadImage("/img/tealx.jpg");

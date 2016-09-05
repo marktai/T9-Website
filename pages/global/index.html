@@ -9,8 +9,6 @@
     <meta name="description" content="">
     <meta name="author" content="">
 
-    <title>Mark Tai</title>
-
     <!-- Bootstrap Core CSS -->
     <link href="./bower_components/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
 
@@ -67,75 +65,63 @@
                     <a class="navbar-brand" href="#/">Meta Tic Tac Toe</a>
                 </div>
 
-                <ul class="nav navbar-nav navbar-right" ng>
- 
-                    <li class="dropdown" ng-show="$root.loggedIn()" ng-cloak>
-					   <a href="#" target="_self" class="dropdown-toggle" data-toggle="dropdown" ng-cloak>{{$root.username}}<span class="caret"></a>
-                        <ul id="login-dp" class="dropdown-menu">
-                          <li>
-                           <div class="row">
-                              <div class="col-md-12">
-								  <h3 style="margin-top:0px;">Login:</h3>
-								  <ul>
-									  <li><a href="#/profile">Profile</a></li>
-								  </ul>
-                              </div>
-                              <div class="bottom text-center">
-							      <button class="btn btn-danger" ng-click="$root.logout()">Logout</button>
-							  </div>
-                           </div>
-                          </li>
-                        </ul>
-                    </li>               
-
-
-                    <li class="dropdown" ng-show="!$root.loggedIn()" ng-cloak>
-                      <a href="#" target="_self" class="dropdown-toggle" data-toggle="dropdown">Login<span class="caret"></span></a>
-                        <ul id="login-dp" class="dropdown-menu">
-                          <li>
-                           <div class="row">
-                              <div class="col-md-12">
-								  <h3 style="margin-top:0px;">Login:</h3>
-                                  <div class="form-group">
-                                    <label class="sr-only" for="exampleInputEmail2" >Username</label>
-                                    <input id="exampleInputEmail2" placeholder="Username" required ng-model="$root.username" ng-enter="$root.login()">
-                                  </div>
-                                  <div class="form-group">
-                                    <label class="sr-only" for="exampleInputPassword2">Password</label>
-                                    <input type="password" id="exampleInputPassword2" placeholder="Password" required ng-model="$root.password" ng-enter="$root.login()">
-                                    <!-- <div class="help-block text-right"><a href="">Forget the password ?</a></div> -->
-                                  </div>
-                                  <div class="checkbox">
-                                    <label>
-                                    <input type="checkbox" ng-model="$root.stayLoggedIn"> Stay logged in
-                                    </label>
-                                  </div>
-                                  <div class="form-group">
-                                    <button ng-click="$root.login()" class="btn btn-primary btn-block">Sign In</button>
-                                  </div>
-                              </div>
-                              <div class="bottom text-center">
-                                  New here? <a href="#/register"><b>Register</b></a>
-                              </div>
-                           </div>
-                          </li>
-                        </ul>
-                    </li>
-				</ul>
-
                 <!-- Collect the nav links, forms, and other content for toggling -->
                 <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
-                    <ul class="nav navbar-nav navbar-right">
-                        <!-- <li>
-                            <a href="#/game">Game</a>
-                        </li> -->
-                        <!-- <li>
-                            <a href="#/login">Login</a>
-                        </li>
-                        <li>
-                            <a href="#/register">Register</a>
-                        </li> -->
-                    </ul>
+ 
+					<ul class="nav navbar-nav navbar-right" id="bs-example-navbar-collapse-1" >
+	 
+						<li class="dropdown" ng-show="$root.loggedIn()" ng-cloak>
+						   <a href="#" target="_self" class="dropdown-toggle" data-toggle="dropdown" ng-cloak>{{$root.username}}<span class="caret"></a>
+							<ul id="login-dp" class="dropdown-menu">
+							  <li>
+							   <div class="row">
+								  <div class="col-md-12">
+									  <ul>
+										  <li><a href="#/profile">Profile</a></li>
+									  </ul>
+								  </div>
+								  <div class="bottom text-center">
+									  <button class="btn btn-danger" ng-click="$root.logout()">Logout</button>
+								  </div>
+							   </div>
+							  </li>
+							</ul>
+						</li>               
+
+
+						<li class="dropdown" ng-show="!$root.loggedIn()" ng-cloak>
+						  <a href="#" target="_self" class="dropdown-toggle" data-toggle="dropdown">Login<span class="caret"></span></a>
+							<ul id="login-dp" class="dropdown-menu">
+							  <li>
+							   <div class="row">
+								  <div class="col-md-12">
+									  <h3 style="margin-top:0px;">Login:</h3>
+									  <div class="form-group">
+										<label class="sr-only" for="exampleInputEmail2" >Username</label>
+										<input id="exampleInputEmail2" placeholder="Username" required ng-model="$root.username" ng-enter="$root.loginAndRedirect()">
+									  </div>
+									  <div class="form-group">
+										<label class="sr-only" for="exampleInputPassword2">Password</label>
+										<input type="password" id="exampleInputPassword2" placeholder="Password" required ng-model="$root.password" ng-enter="$root.loginAndRedirect()">
+										<!-- <div class="help-block text-right"><a href="">Forget the password ?</a></div> -->
+									  </div>
+									  <div class="checkbox">
+										<label>
+										<input type="checkbox" ng-model="$root.stayLoggedIn"> Stay logged in
+										</label>
+									  </div>
+									  <div class="form-group">
+										<button ng-click="$root.loginAndRedirect()" class="btn btn-primary btn-block">Sign In</button>
+									  </div>
+								  </div>
+								  <div class="bottom text-center">
+									  New here? <a href="#/register"><b>Register</b></a>
+								  </div>
+							   </div>
+							  </li>
+							</ul>
+						</li>
+					</ul>
                 </div>
                 <!-- /.navbar-collapse -->
             </div>
@@ -147,7 +133,7 @@
 
     <!-- MAIN CONTENT -->
     <div>
-
+        <p ng-cloak ng-hide="$root.registered" style="text-align:center;"> It seems you aren't registered yet.  Please check your email. </p>
       <div ng-view></div>
 
     </div>
@@ -185,6 +171,8 @@
     <script src="./bower_components/ng-websocket/ng-websocket.js"></script>
 	<script src="./bower_components/ngstorage/ngStorage.min.js"></script>
 	<script src="./bower_components/angular-recaptcha/release/angular-recaptcha.min.js"></script>
+    <script src="./bower_components/angular-scroll-glue/src/scrollglue.js"></script>
+    <script src="./bower_components/angular-audio/app/angular.audio.js"></script>
 
 
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/rollups/hmac-sha256.js"></script>
@@ -192,10 +180,12 @@
     <!-- Put at end so other pages can set title -->
     <title>Meta Tic Tac Toe</title>
     <script src="./pages/global/main.js"></script>
+    <script src="./pages/global/routeProvider.js"></script>
 
     <script src="./js/services/LoginService.js"></script>
     <script src="./js/services/UserService.js"></script>
     <script src="./js/services/GameService.js"></script>
+    <script src="./js/services/AIService.js"></script>
 
 
 

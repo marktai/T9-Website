@@ -29,21 +29,25 @@ marktai.controller("RegisterCtl", ["$scope", "$rootScope", "$q", "vcRecaptchaSer
 
         var password = $scope.password;
         retPromise.then(function(userID) {
-            $scope.out = "User successfully created with user ID " + userID
+            // $scope.out = "User successfully created with user ID " + userID
             $rootScope.username = $scope.username;
             $rootScope.password = password;
-            $rootScope.login();
-            $scope.password = '';
-            $scope.verify_password = '';
+            $rootScope.login().then(function(creds){
+                $rootScope.sendFromLogin();
+            }, function(error) {
+                $scope.out = error;
+            });
         }, function(error) {
             if (error == "User already made") {
                 $scope.out = "Username \"" + $scope.username + "\" already taken"
             } else {
                 $scope.out = error
             }
+        }).finally(function(){
+            $scope.password = '';
+            $scope.verify_password = '';
+            $scope.resetRecaptcha();
         })
-        $scope.resetRecaptcha();
-        return retPromise
     }
 
     $scope.setWidgetId = function(widgetId) {

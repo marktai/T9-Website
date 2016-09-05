@@ -46,53 +46,17 @@
 						<label for="pwd">Password:</label>
 						<input type="password" ng-model="password" class="form-control" ng-enter="login()" id="pwd">
 					</div>
+
+					  <div class="checkbox">
+						<label>
+						<input type="checkbox" ng-model="$root.stayLoggedIn"> Stay logged in
+						</label>
+					  </div>
 				</form>
 				
 				<button ng-click="login()" class="btn btn-default">Login</button>
 
 				<p>New here? <a href="#/register">Register</a></p>
-                <!-- <button ng-click="verifySecret()" class="btn btn-default">Verify Secret</button> -->
-				
-
-
-				<p ng-show = "out && false" style = "white-space:pre-wrap; word-wrap: break-word" ng-bind='out' ></p>
-
-				<div ng-show="userid != -1">
-					<br>
-                    <h3>Games:</h3>
-					<h4>My Turn:</h4>
-					<ul>
-						<div ng-repeat="game in myTurnGames">
-							<li><a ng-href="#/game#{{game}}">{{game + " with " + opponents[game]}}</a></li>
-						</div>
-					</ul>
-
-                    <h4>Opponent Turn:</h4>
-                    <ul>
-                        <div ng-repeat="game in opponentTurnGames">
-                            <li><a ng-href="#/game#{{game}}">{{game + " with " + opponents[game]}}</a></li>
-                        </div>
-                    </ul>
-
-                    <h4>Done:</h4>
-                    <ul>
-                        <div ng-repeat="game in doneGames">
-                            <li><a ng-href="#/game#{{game}}">{{game + " with " + opponents[game]}}</a></li>
-                        </div>
-                    </ul>
-
-
-                    <div class="form-group row" ng-submit="makeGame()">
-                        <label for="player2">Other Player's Username:</label>
-                        <div class = "col-md-10">
-                            <input type="text" ng-model="player2" class="form-control" ng-enter="makeGame()" id="player2">
-                        </div>
-                        <div class = "col-md-2">
-                            <button ng-click="makeGame()" class="btn btn-default">Make Game</button>
-                        </div>
-
-                    </div>
-				</div>
             </div>
         </div>
         <div ng-bind="error"> </div>

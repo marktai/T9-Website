@@ -1,66 +1,6 @@
 var defaultPage = "login";
 
-var marktai = new angular.module("marktai", ["ngTouch", "ngResource", 'ngRoute', "ngSanitize", "ngWebsocket", "ngStorage", 'vcRecaptcha']);
-
-
-// Sets up default page to be login and redirects every other one to 
-marktai.config(function($routeProvider, $locationProvider) {
-    $routeProvider
-
-        .when('/404', {
-        templateUrl: './pages/404/404.html',
-        controller: "404Ctl"
-    })
-
-    .when('/game', {
-
-            templateUrl: './pages/game/game.html',
-            controller: "GameCtl"
-
-        })
-        .when('/login', {
-            templateUrl: './pages/login/login.html',
-            controller: 'LoginCtl',
-        })
-
-    .when('/register', {
-        templateUrl: './pages/register/register.html',
-        controller: 'RegisterCtl',
-    })
-
-    .when('/profile', {
-        templateUrl: './pages/profile/profile.html',
-        controller: 'ProfileCtl',
-    })
-
-
-    // causes no path to go to default page
-    .when('', {
-            redirectTo: function() {
-                console.log("empty")
-                return "/" + defaultPage
-            }
-        })
-        .when('/', {
-            redirectTo: function() {
-                console.log("empty")
-                return "/" + defaultPage
-            }
-        })
-
-
-    // causes unrecognized path to go to default page
-    // redirects to login if not logged in
-    .otherwise({
-        redirectTo: function(a, b, c) {
-            return "/404#" + b;
-        }
-    })
-
-    // $locationProvider.html5Mode(true);
-
-});
-
+var marktai = new angular.module("marktai", ["ngTouch", "ngResource", 'ngRoute', "ngSanitize", "ngWebsocket", "ngStorage", 'vcRecaptcha', 'luegg.directives', 'ngAudio']);
 
 // enables attribute ng-enter which calls a function when enter is pressed
 marktai.directive('ngEnter', function() {
@@ -107,7 +47,7 @@ marktai.directive('resize', function($window) {
 })
 
 // inject the $resource dependency here
-marktai.controller("MainCtl", ["$scope", "$rootScope", "$resource", "$location", "$q", "LoginService", function($scope, $rootScope, $resource, $location, $q, LoginService) {
+marktai.controller("MainCtl", ["$scope", "$rootScope", "$resource", "$location", "$window", "$q", "LoginService", function($scope, $rootScope, $resource, $location, $window, $q, LoginService) {
 
     $rootScope.info = "";
     $rootScope.error = "";
@@ -117,10 +57,12 @@ marktai.controller("MainCtl", ["$scope", "$rootScope", "$resource", "$location",
 
     $rootScope.userid = -1;
     $rootScope.secret = "";
+    $rootScope.registered = true;
 
     $rootScope.username = "";
     $rootScope.password = "";
     $rootScope.stayLoggedIn = false;
+
 
     $rootScope.sendToLogin = function() {
         var redirectMap = {
@@ -141,9 +83,9 @@ marktai.controller("MainCtl", ["$scope", "$rootScope", "$resource", "$location",
                     if (redirectMap["Hash"]) {
                         $location.hash(redirectMap["Hash"]);
                     }
+                    return; // don't want to also send to profile
                 }
-                return // don't want to also send to profile
-            } catch (err) {;
+            } catch (err) {
             }
         }
         $location.path("profile");
@@ -167,12 +109,11 @@ marktai.controller("MainCtl", ["$scope", "$rootScope", "$resource", "$location",
         return "";
     }
 
-
     $rootScope.login = function() {
         var temp = $rootScope.password;
         LoginService.logout();
         $rootScope.password = '';
-        return LoginService.login($rootScope.username, temp).then(function(creds) {
+        return LoginService.login($rootScope.username, temp, $rootScope.stayLoggedIn).then(function(creds) {
             $rootScope.userid = creds["UserID"]
             $rootScope.secret = creds["Secret"];
             return $q.resolve(creds);
@@ -181,6 +122,14 @@ marktai.controller("MainCtl", ["$scope", "$rootScope", "$resource", "$location",
             return $q.reject(error);
         })
     }
+
+	$rootScope.loginAndRedirect = function() {
+		$rootScope.login().then(
+			function(creds){ 
+				$rootScope.sendFromLogin();
+			}, function(error) {
+		})
+	};
 
     $rootScope.checkLogin = function() {
         return LoginService.checkLocalStorageLogin().then(function(creds) {
@@ -195,13 +144,25 @@ marktai.controller("MainCtl", ["$scope", "$rootScope", "$resource", "$location",
     }
 
     $rootScope.logout = function() {
+        LoginService.logout($rootScope.userid, $rootScope.secret);
         $rootScope.username = "";
         $rootScope.password = "";
         $rootScope.userid = -1;
         $rootScope.secret = "";
-        LoginService.logout();
         $location.path("login");
     }
 
+    $rootScope.checkRegistered = function() {
+        LoginService.checkRegistered($rootScope.userid, $rootScope.secret).then(function(registered){
+            $rootScope.registered = registered;
+        }, function(error) {
+            console.log(error);
+        });
+    }
+
+	if($window.opener) {
+		console.log($window.opener);
+		$window.opener.location = "https://reddit.com/r/ooerintensifies";
+	}
 
 }]);

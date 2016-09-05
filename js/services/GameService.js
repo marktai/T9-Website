@@ -111,11 +111,15 @@ marktai.service("GameService", ["$http", "$q", "$localStorage", "$websocket", "L
 
     }
 
-    this.sendChat = function(text) {
+    this.sendChat = function(username, text) {
         if (typeof(ws) === "null") {
             throw "ws is not yet opened"
         }
-        ws.$emit('Chat-Client-Send', text);
+        var data = {
+            'username': username,
+            'text': text,
+        }
+        ws.$emit('Chat-Client-Send', data);
     }
 
 

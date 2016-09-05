@@ -9,13 +9,10 @@ marktai.controller("ProfileCtl", ["$scope", "$rootScope", "$q", "$location", "Lo
 
     $scope.opponents = {};
 
-
     $scope.player2 = "";
 
-
-
-
-
+    $scope.registered = true;
+    
     $scope.getUserGames = function() {
         $scope.games = [];
         $scope.myTurnGames = [];
@@ -51,7 +48,6 @@ marktai.controller("ProfileCtl", ["$scope", "$rootScope", "$q", "$location", "Lo
         })
     }
 
-
     $scope.makeGame = function() {
         UserService.makeGame($rootScope.userid, $scope.player2, $rootScope.secret).then(function(gameID) {
             $scope.gameID = gameID
@@ -61,10 +57,10 @@ marktai.controller("ProfileCtl", ["$scope", "$rootScope", "$q", "$location", "Lo
         })
     }
 
-
     $rootScope.checkLogin().then(
         function(creds) {
-            $scope.getUserGames()
+            $scope.checkRegistered();
+            $scope.getUserGames();
         },
         function(error) {
             $rootScope.sendToLogin();
