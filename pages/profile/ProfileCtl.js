@@ -1,4 +1,4 @@
-marktai.controller("ProfileCtl", ["$scope", "$rootScope", "$q", "$location", "LoginService", "UserService", "GameService", function($scope, $rootScope, $q, $location, LoginService, UserService, GameService) {
+marktai.controller("ProfileCtl", ["$scope", "$rootScope", "$q", "$location", "LoginService", "GameService", function($scope, $rootScope, $q, $location, LoginService, GameService) {
     $rootScope.page = "login";
 
     $scope.games = [];
@@ -18,7 +18,7 @@ marktai.controller("ProfileCtl", ["$scope", "$rootScope", "$q", "$location", "Lo
         $scope.myTurnGames = [];
         $scope.opponentTurnGames = [];
         $scope.doneGames = [];
-        UserService.getUserGames($rootScope.userid, $rootScope.secret).then(function(games) {
+        GameService.getUserGames($rootScope.userid, $rootScope.secret).then(function(games) {
             $scope.games = games
             if ($scope.games.length != 0) {
                 for (var game of games) {
@@ -49,7 +49,7 @@ marktai.controller("ProfileCtl", ["$scope", "$rootScope", "$q", "$location", "Lo
     }
 
     $scope.makeGame = function() {
-        UserService.makeGame($rootScope.userid, $scope.player2, $rootScope.secret).then(function(gameID) {
+        GameService.makeGame($rootScope.userid, $scope.player2, $rootScope.secret).then(function(gameID) {
             $scope.gameID = gameID
             $scope.getUserGames()
         }, function(error) {
