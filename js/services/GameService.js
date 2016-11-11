@@ -143,7 +143,7 @@ marktai.service("GameService", ["$http", "$q", "$localStorage", "$websocket", "L
         var url = '/T9' + urlWithoutT9;
         var data = {}
         var config = {
-            'headers': LoginService.genAuthHeaders(urlWithoutT9, secret, userID)
+            'headers': LoginService.genAuthHeaders(urlWithoutT9, secret, player1)
         }
         return $http.post(url, data, config).then(function(result) {
             return $q.resolve(result.data["ID"]);
