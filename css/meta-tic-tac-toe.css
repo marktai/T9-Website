@@ -59,3 +59,15 @@ body {
 {
   display: none !important;
 }
+
+.bold {
+  font-weight: bold;
+}
+
+.defender {
+  color: #0012b3; 
+}
+
+.attacker {
+  color: #b31200;
+}

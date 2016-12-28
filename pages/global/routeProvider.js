@@ -3,21 +3,22 @@
 marktai.config(function($routeProvider, $locationProvider) {
     $routeProvider
 
-        .when('/404', {
+    .when('/404', {
         templateUrl: './pages/404/404.html',
         controller: "404Ctl"
     })
 
     .when('/game', {
 
-            templateUrl: './pages/game/game.html',
-            controller: "GameCtl"
+        templateUrl: './pages/game/game.html',
+        controller: "GameCtl",
+//        reloadOnSearch: false,
 
-        })
-        .when('/login', {
-            templateUrl: './pages/login/login.html',
-            controller: 'LoginCtl',
-        })
+    })
+    .when('/login', {
+        templateUrl: './pages/login/login.html',
+        controller: 'LoginCtl',
+    })
 
     .when('/register', {
         templateUrl: './pages/register/register.html',
@@ -29,18 +30,17 @@ marktai.config(function($routeProvider, $locationProvider) {
         controller: 'ProfileCtl',
     })
 
-
     // causes no path to go to default page
     .when('', {
-            redirectTo: function() {
-                return "/" + defaultPage
-            }
-        })
-        .when('/', {
-            redirectTo: function() {
-                return "/" + defaultPage
-            }
-        })
+        redirectTo: function() {
+            return "/" + defaultPage
+        }
+    })
+    .when('/', {
+        redirectTo: function() {
+            return "/" + defaultPage
+        }
+    })
 
 
     // causes unrecognized path to go to default page

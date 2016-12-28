@@ -1,83 +1,45 @@
-marktai.service("GameService", ["$http", "$q", "$localStorage", "$websocket", "LoginService", function($http, $q, $localStorage, $websocket, LoginService) {
+marktai.service("GameService", ["$http", "$q", "$localStorage", "$websocket", function($http, $q, $localStorage, $websocket) {
 
     var ws = null;
+    var items = [];
+    var itemsSet = false;
 
-    this.getGame = function(gameID) {
-        var promises = [];
-        var boardPromise = $http.get('/T9/games/' + gameID + '/board').then(function(result) {
-            return $q.resolve(result.data["Board"])
+
+    this.getAllGames = function() {
+        var allGames = $http.get('./api/games').then(function(result) {
+            return $q.resolve(result.data["Games"])
         }, function(error) {
             return $q.reject(error.data["Error"])
         })
-        promises.push(boardPromise);
 
-        var infoPromise = $http.get('/T9/games/' + gameID + '/info').then(function(result) {
+        return allGames;
+    }
+
+    this.getGame = function(gameID) {
+        var infoPromise = $http.get('./api/games/' + gameID + '/info').then(function(result) {
             return $q.resolve(result.data["Game"])
         }, function(error) {
             return $q.reject(error.data["Error"])
         })
-        promises.push(infoPromise);
 
-        return $q.all(promises)
+        return infoPromise;
     }
 
-    var parseOpponentAndTurn = function(gameData, username) {
-        var playerNames = gameData["PlayerNames"];
-
-        var opponentName = "";
-        if (username == playerNames[0]) {
-            opponentName = playerNames[1];
-        } else if (username == playerNames[1]) {
-            opponentName = playerNames[0];
-        } else {
-            return $q.reject(username + " not found in game " + gameID);
-        }
-
-        // 0 for my turn
-        // 1 for opponent turn
-        // 2 for finished
-
-        var myTurn = -1;
-
-        var playingPlayerUsername = gameData["PlayerNames"][Math.floor(gameData["Turn"] / 10)];
-
-        if (gameData["Turn"] >= 20) {
-            myTurn = 2;
-        } else if (playingPlayerUsername == username) {
-            myTurn = 0;
-        } else if (playingPlayerUsername == opponentName) {
-            myTurn = 1;
-        }
-
-        if (myTurn == -1) {
-            return $q.reject("Unable to determine turn")
-        }
-
-        return $q.resolve([opponentName, myTurn])
-    }
-
-
-    this.getOpponentAndTurn = function(gameID, username) {
-        return $http.get('/T9/games/' + gameID + '/info').then(function(result) {
-            var gameData = result.data["Game"];
-            return parseOpponentAndTurn(gameData, username);
+    this.getGameSections = function(gameID) {
+        var sectionPromise = $http.get('./api/games/' + gameID + '/sections').then(function(result) {
+            return $q.resolve(result.data["Sections"])
         }, function(error) {
             return $q.reject(error.data["Error"])
         })
+        return sectionPromise;
     }
 
+    this.makeMove = function(gameID, player, section) {
+        var urlWithoutT9 = '/games/' + gameID + '/move?Player=' + player + '&Section=' + section;
 
-    this.makeMove = function(gameID, player, secret, box, square) {
+        var url = './api' + urlWithoutT9;
 
-        var urlWithoutT9 = '/games/' + gameID + '/move?Player=' + player + '&Box=' + box + '&Square=' + square;
-
-        var url = '/T9' + urlWithoutT9;
-        var data = {}
-        var config = {
-            'headers': LoginService.genAuthHeaders(urlWithoutT9, secret, player)
-        }
-
-        return $http.post(url, data, config).then(function(result) {
+        return $http.post(url).then(function(result) {
             return $q.resolve(result);
         }, function(error) {
             return $q.reject(error.data["Error"]);
@@ -87,7 +49,7 @@ marktai.service("GameService", ["$http", "$q", "$localStorage", "$websocket", "L
 
     this.initws = function(gameid, open, close, change, chat) {
         ws = $websocket.$new({
-            'url': 'wss://www.marktai.com/T9/games/' + gameid + "/ws",
+            'url': 'ws://54.69.24.69/game/api/games/' + gameid + "/ws",
             'protocols': [],
             'subprotocols': ['base46']
         }); // instance of ngWebsocket, handled by $websocket service
@@ -111,46 +73,64 @@ marktai.service("GameService", ["$http", "$q", "$localStorage", "$websocket", "L
 
     }
 
-    this.sendChat = function(username, text) {
+    this.sendChat = function(username, text, channel) {
         if (typeof(ws) === "null") {
-            throw "ws is not yet opened"
+            throw "ws is not yet opened";
         }
         var data = {
             'username': username,
             'text': text,
-        }
+            'channel': channel, 
+        };
         ws.$emit('Chat-Client-Send', data);
     }
 
-    this.getUserGames = function(userID, secret) {
-        var urlWithoutT9 = '/users/' + userID + "/games"
-
-        var url = '/T9' + urlWithoutT9;
-        var config = {
-            'headers': LoginService.genAuthHeaders(urlWithoutT9, secret, userID)
-        }
-
-        return $http.get(url, config).then(function(result) {
-            return $q.resolve(result.data["Games"]);
-        }, function(error) {
-            return $q.reject(error.data["Error"]);
-        })
-    }
-
-    // player1 must be a userID, but player2 can be a username
-    this.makeGame = function(player1, player2, secret) {
-        var urlWithoutT9 = '/games?Player1=' + player1 + "&Player2=" + player2
-        var url = '/T9' + urlWithoutT9;
-        var data = {}
-        var config = {
-            'headers': LoginService.genAuthHeaders(urlWithoutT9, secret, player1)
-        }
-        return $http.post(url, data, config).then(function(result) {
+    this.makeGame = function() {
+        var urlWithoutT9 = '/games';
+        var url = './api' + urlWithoutT9;
+        return $http.post(url).then(function(result) {
             return $q.resolve(result.data["ID"]);
         }, function(error) {
             return $q.reject(error.data["Error"]);
         })
+    }
 
+    this.addPlayer = function(gameID, playerName, isAttacker, item, section) {
+        var urlWithoutT9 = '/games/' + gameID + '/player?Name=' + playerName + '&IsAttacker=' + (isAttacker ? 'true' : 'false') + '&Item=' + item + '&Section=' + section;
+        var url = './api' + urlWithoutT9;
+        return $http.post(url).then(function(result) {
+            return $q.resolve(result.data["PlayerID"]);
+        }, function(error) {
+            return $q.reject(error.data["Error"]);
+        })
+    }
+
+    this.resetHealth = function(gameID) {
+        var urlWithoutT9 = '/games/' + gameID + '/resetHealth';
+        var url = './api' + urlWithoutT9;
+        return $http.post(url).then(function(result) {
+            return $q.resolve();
+        }, function(error) {
+            return $q.reject(error.data["Error"]);
+        })
+    }
+
+    this.items = function() {
+        if (itemsSet) {
+            return $q.resolve(items);
+        }
+
+        return $http.get('./api/items').then(function(result) {
+            for (key in result.data["Items"]) {
+                if (result.data["Items"].hasOwnProperty(key)){
+                    items.push({"Name": key, "Value": result.data["Items"][key]});
+                }
+            }
+            itemsSet = true;
+            return $q.resolve(items);
+        }, function(error) {
+            return $q.resolve(error.data["Error"]);
+        });
     }
 
 

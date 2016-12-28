@@ -1,45 +1,34 @@
 marktai.controller("GameCtl", ["$scope", "$rootScope", "$http", "$location", "$sce", "$q", "$websocket", "$window", "$timeout", 'ngAudio', "GameService", "LoginService", "AIService", function($scope, $rootScope, $http, $location, $sce, $q, $websocket, $window, $timeout, ngAudio, GameService, LoginService, AIService) {
     $rootScope.page = "game";
 
-    $scope.username = '';
-    $scope.userid = -1;
-    $scope.secret = '';
+    $scope.playerName = '';
+    $scope.isAttackerInput = false;
+    $scope.sectionInput = 1;
+    $scope.itemInput = 0;
+    $scope.itemTupleInput = {};
 
-    $scope.out = '';
+    $scope.items = {};
+    GameService.items().then(function(items){
+        $scope.items = items;
+        $scope.itemTupleInput = {"Name": "Default", "Value": 0};
+    }, function(error){
+        console.log(error);
+    });
 
-    $scope.gameid = ""
+    $scope.playerId = -1;
 
-    $scope.gameData = {}
-    $scope.board = ""
-    $scope.boardArray = []
+    $scope.player = {};
 
-    $scope.players = []
-    $scope.player = ''
+    $scope.gameId = 1;
+    $scope.gameTime = 0;
 
-    $scope.boxes = []
-    $scope.box = $scope.boxes[0]
+    $scope.gameData = {};
+    $scope.sections = {};
 
-    $scope.squares = []
-    $scope.square = $scope.squares[0]
+    $scope.moveSection = 1;
 
-    $scope.boxSize = 50;
-    $scope.spaces = 8;
-
-    $scope.myTurn = false;
-    $scope.whoseTurn = "";
-
-    $scope.selectedBox = [-1, -1];
-
-
-    $scope.games = [];
-
-    $scope.myTurnGames = [];
-    $scope.opponentTurnGames = [];
-    $scope.doneGames = [];
-
-    $scope.opponents = {};
-
-    $scope.player2 = "";
+    $scope.actionTime = -1;
+    $scope.flashTime = -1;
 
     $scope.chatbox = "";
     $scope.chats = [];
@@ -49,150 +38,205 @@ marktai.controller("GameCtl", ["$scope", "$rootScope", "$http", "$location", "$s
     $scope.newChatName = "";
 
     $scope.chatTitle = "";
-    $scope.oldTitle = "Meta Tic Tac Toe";
+    $scope.oldTitle = "King of the Hill";
+    $scope.newTitle = "";
     $scope.title = $scope.oldTitle;
+    
+    $scope.oldFaviconLink = $rootScope.faviconLink;
+    $scope.alertFaviconLink = "https://upload.wikimedia.org/wikipedia/commons/thumb/1/13/Disc_Plain_red.svg/2000px-Disc_Plain_red.svg.png";
 
 
-    var ws = null
-
-    for (var i = 0; i < 9; i++) {
-        var box = {
-            'Owned': 0,
-            'Squares': []
-        };
-        for (var j = 0; j < 9; j++) {
-            box['Squares'].push(0);
-        }
-        $scope.boardArray.push(box)
-        $scope.boxes.push('' + i)
-        $scope.squares.push('' + i)
+    $scope.channels = {
+        "All": "0",
+        "Defenders": "1",
+        "Attackers": "2",
     }
+    
+    $scope.selectedChannel = $scope.channels["All"];
+    $scope.defaultChannelSet = false;
 
 
-    var xImg;
-    var oImg;
-    var tealxImg;
-    var redoImg;
-
-
-    $scope.verifySecret = function() {
-        LoginService.verifySecret($scope.username, $scope.secret).then(function(creds) {
-            $scope.userid = creds["UserID"]
-            $scope.secret = creds["Secret"]
-        }, function(error) {
-            $scope.out = "Verification failed.";
-        });
-    }
-
-    $scope.rateGame = AIService.rateGame;
+    var websocketInitialized = false;
 
     $scope.getGame = function() {
-        GameService.getGame($scope.gameid).then(function(results) {
-            $scope.boardArray = results[0];
-            $scope.loadAllImages();
-
-
-            $scope.gameData = results[1];
-            $scope.players = $scope.gameData["Players"]
-            $scope.playerNames = $scope.gameData["PlayerNames"]
-
-            var playingPlayer = $scope.players[Math.floor($scope.gameData["Turn"] / 10)]
-            var playingPlayerName = $scope.playerNames[Math.floor($scope.gameData["Turn"] / 10)]
-
-
-            if ($scope.userid == playingPlayer) {
-                $scope.myTurn = true;
-            } else {
-                $scope.myTurn = false;
-            }
-
-            if ($scope.gameData["Turn"] >= 20) {
-                $scope.whoseTurn = "Game finished.  " + (($scope.gameData["Turn"] - 20 == 1) ? "X" : "O") + " wins!"
-            } else if ($scope.myTurn == 1) {
-                $scope.whoseTurn = "Your turn!"
-                var box = $scope.gameData["Turn"] % 10;
-                if (box == 9) {
-                    $scope.whoseTurn += " Go in any box.";
-                } else {
-                    $scope.whoseTurn += " Go in the ";
-                    var row = Math.floor(box / 3);
-                    var col = box % 3;
-
-                    if (row == 0) {
-                        $scope.whoseTurn += "top";
-                    } else if (row == 1) {
-                        $scope.whoseTurn += "middle";
-                    } else {
-                        $scope.whoseTurn += "bottom";
-                    }
-                    $scope.whoseTurn += "-";
-
-                    if (col == 0) {
-                        $scope.whoseTurn += "left";
-                    } else if (col == 1) {
-                        $scope.whoseTurn += "middle";
-                    } else {
-                        $scope.whoseTurn += "right";
-                    }
-
-                    $scope.whoseTurn += " box.";
-                }
-            } else if ($scope.myTurn == 0) {
-                $scope.whoseTurn = playingPlayerName + "'s turn!";
-            }
-            if ($scope.username === "me" && $scope.myTurn) {
-                // var move = AIService.generateBestMove({"GameData": $scope.gameData, "BoardArray": $scope.boardArray})
-                // console.log(move);
-                // $scope.makeMove(move[0], move[1]);
-            }
-            var playerReference = ($scope.username === $scope.gameData["PlayerNames"][0]) ? 1 : 2;
-            console.log("player", AIService.rateGame({"GameData": $scope.gameData, "BoardArray": $scope.boardArray}, playerReference))
-            console.log("opponent", AIService.rateGame({"GameData": $scope.gameData, "BoardArray": $scope.boardArray}, 3 - playerReference))
-
+        return GameService.getGame($scope.gameId).then(function(gameData) {
+            $scope.gameData = gameData;
+            return $q.resolve();
         }, function(error) {
             $scope.error = error;
+            return $q.reject();
         });
+    }
+
+    $scope.getGameSections = function() {
+        return GameService.getGameSections($scope.gameId).then(function(sections) {
+            $scope.sections = sections;
+            return $q.resolve();
+        }, function(error) {
+            $scope.error = error;
+            return $q.reject();
+        });
+    }
+
+    var parseDateToMillis = function(dateString) {
+        return (new Date(dateString)).getTime() + 1000;
     }
 
     $scope.refresh = function() {
-        $scope.gameData = {}
-        $scope.board = ""
-        $scope.boardArray = [{
-            "Owned": 0,
-            "Squares": [0, 0, 0, 0, 0, 0, 0, 0, 0]
-        }, {
-            "Owned": 0,
-            "Squares": [0, 0, 0, 0, 0, 0, 0, 0, 0]
-        }, {
-            "Owned": 0,
-            "Squares": [0, 0, 0, 0, 0, 0, 0, 0, 0]
-        }, {
-            "Owned": 0,
-            "Squares": [0, 0, 0, 0, 0, 0, 0, 0, 0]
-        }, {
-            "Owned": 0,
-            "Squares": [0, 0, 0, 0, 0, 0, 0, 0, 0]
-        }, {
-            "Owned": 0,
-            "Squares": [0, 0, 0, 0, 0, 0, 0, 0, 0]
-        }, {
-            "Owned": 0,
-            "Squares": [0, 0, 0, 0, 0, 0, 0, 0, 0]
-        }, {
-            "Owned": 0,
-            "Squares": [0, 0, 0, 0, 0, 0, 0, 0, 0]
-        }, {
-            "Owned": 0,
-            "Squares": [0, 0, 0, 0, 0, 0, 0, 0, 0]
-        }]
-        $scope.loadAllImages()
-        $scope.getGame()
+        var oldHealth = $scope.gameData['Health'];
+        $scope.gameData = {};
+        $scope.getGame().then(function(success){
+            if ($scope.playerId > 0) {
+                $scope.player = $scope.gameData['Players']['' + $scope.playerId];
+                $scope.actionTime = parseDateToMillis($scope.player['NextAction']);
+                $scope.flashTime = parseDateToMillis($scope.player['NextFlash']);
+                angular.element(document.querySelector('#actionTime'))[0].resume();
+                /*console.log(angular.element(document.querySelector('#actionTime'))[0]);
+                console.log($scope.actionTime - (new Date()).getTime());
+                console.log($scope.flashTime - (new Date()).getTime());*/
+                angular.element(document.querySelector('#flashTime'))[0].resume();
+                
+                if (!$scope.player['IsAttacker'] && oldHealth > $scope.gameData['Health']){
+                    $scope.startTitleFlash("Taking Damage!");
+                }
+
+                if (!$scope.defaultChannelSet) {
+                    $scope.selectedChannel = ($scope.player['IsAttacker'] ? $scope.channels['Attackers'] : $scope.channels['Defenders']);
+                    $scope.defaultChannelSet = true;
+                }
+
+            }
+            if ($scope.gameData['Health'] == 0) {
+                $scope.gameTime = new Date($scope.gameData['Ended']) - new Date($scope.gameData['Started']);
+            } else {
+                $scope.gameTime = new Date() - new Date($scope.gameData['Started']);
+            }
+        }, function(error){
+            ;
+        })
+        $scope.getGameSections();
+
+        if (!websocketInitialized) {
+            GameService.initws(
+                $scope.gameId,
+                function(data) {
+                    console.log("websocket opened");
+                }, // open
+                function(data) {
+                    console.log("websocket closed");
+                    websocketInitialized = false;
+                }, // close
+                function(data) {
+                    /*console.log("game updated due to websocket update")*/
+                    $scope.refresh();
+                }, // change
+                function(chat) {
+                    try {
+                        var channel = chat['channel'];
+                        if (typeof(channel) === 'undefined' ||
+                            channel == $scope.channels['All'] ||
+                            ($scope.player['IsAttacker'] && channel == $scope.channels['Attackers']) ||
+                            (!$scope.player['IsAttacker'] && channel == $scope.channels['Defenders'])
+                        ){
+                            $scope.chats.push(chat);
+                            $scope.$apply()
+                            console.log('Receive chat data: ' + JSON.stringify(chat));
+                            if (chat["username"] !== $scope.username) {
+                                if (notificationSound && !$scope.muted) {
+                                    notificationSound.play();
+                                }
+                            }
+
+                            if (!$scope.focused) {
+                                $scope.newChatName = chat["username"];
+                                $scope.startTitleFlash($scope.newChatName + " messaged you");
+                            }
+                        } else {
+                            console.log('Ignored chat data: ' + JSON.stringify(chat));
+                        }
+
+                    } catch (error) {
+                        console.log('Receive chat error: ' + error);
+                    }
+                } // chat
+            );
+            websocketInitialized = true;
+        } 
     }
 
-    $scope.makeMove = function(box, square) {
+    $scope.updateHashWithRegister = function() {
+        var settings = {
+            'gameId': $scope.gameId,
+            'playerName': $scope.playerName,
+            'section': $scope.sectionInput,
+            'item': $scope.itemTupleInput.Value,
+            'isAttacker': $scope.isAttackerInput,
+        }
+
+        $location.hash(JSON.stringify(settings));
+    }
+
+
+    $scope.registerPlayer = function() {
         $scope.error = '';
-        return GameService.makeMove($scope.gameid, $scope.userid, $scope.secret, box, square).then(function(result) {
+
+        return $scope.getGame().then(function(success){
+            var playerAlreadyInGame = false;
+            if ($scope.gameData && $scope.gameData['Players']) {
+                for (var key in $scope.gameData['Players']) {
+                    if (!$scope.gameData['Players'].hasOwnProperty(key)) {
+                        continue;
+                    }
+
+                    if ($scope.gameData['Players'][key].Name == $scope.playerName) {
+                        playerAlreadyInGame = true;
+                        $scope.playerId = $scope.gameData['Players'][key]['ID'];
+                        break;
+                    }
+                }
+            }
+
+            if (!playerAlreadyInGame) {
+                GameService.addPlayer(
+                    $scope.gameId, 
+                    $scope.playerName,
+                    $scope.isAttackerInput,
+                    $scope.itemInput,
+                    $scope.sectionInput
+                ).then(function(playerId){
+                    $scope.playerId = playerId;
+                    return $scope.refresh();
+                }, function(error){ 
+                    console.log(error);
+                    $scope.error = error;
+                    return $q.reject(error);
+                });
+            } else {
+                return $scope.refresh();
+            }
+
+        }, function(error) {
+            $scope.error = error;
+            return $q.reject(error);
+        })
+
+    }
+
+    $scope.resetHealth = function() {
+        GameService.resetHealth($scope.gameId).then(
+            function(success){},
+            function(error){
+                $scope.error = error;
+                return $q.reject(error)
+            }
+        );
+    }
+
+    $scope.makeMove = function(section) {
+        $scope.error = '';
+        return GameService.makeMove($scope.gameId, $scope.playerId, section).then(function(result) {
             // automatically updates on change with ws
+            $scope.refresh();
             return $q.resolve(result);
         }, function(error) {
             $scope.error = error
@@ -203,7 +247,7 @@ marktai.controller("GameCtl", ["$scope", "$rootScope", "$http", "$location", "$s
     $scope.sendChat = function() {
         if ($scope.chatbox) {
             try {
-                GameService.sendChat($scope.username, $scope.chatbox);
+                GameService.sendChat($scope.playerName, $scope.chatbox, $scope.selectedChannel);
                 $scope.chatbox = "";
             } catch (err) {
                 console.log(err);
@@ -211,200 +255,60 @@ marktai.controller("GameCtl", ["$scope", "$rootScope", "$http", "$location", "$s
         }
     }
 
-    $scope.canvasClicked = function(box, square) {
-
-        // if ($scope.userid == $scope.gameData.Players[0] && ($scope.gameData.Turn == box || $scope.gameData.Turn == 9)) {
-        if ($scope.userid == $scope.gameData.Players[0]) {
-            if ($scope.boardArray[box].Squares[square] == 0) {
-                $scope.boardArray[box].Squares[square] = 4;
-                if ($scope.selectedBox[0] !== -1 && $scope.selectedBox[1] !== -1) {
-                    if ($scope.boardArray[$scope.selectedBox[0]].Squares[$scope.selectedBox[1]] == 4) {
-                        $scope.boardArray[$scope.selectedBox[0]].Squares[$scope.selectedBox[1]] = 0;
-                        $scope.loadIcon($scope.selectedBox[0], $scope.selectedBox[1])
-                    }
-                }
-                $scope.selectedBox = [box, square];
-            } else if ($scope.boardArray[box].Squares[square] == 4) {
-                $scope.boardArray[box].Squares[square] = 1;
-                $scope.makeMove(box, square).then(function(result) {
-                    $scope.getGame()
-                }, function(error) {
-                    $scope.boardArray[$scope.selectedBox[0]].Squares[$scope.selectedBox[1]] = 0;
-                    $scope.loadIcon($scope.selectedBox[0], $scope.selectedBox[1])
-                }).finally(function() {
-                    $scope.selectedBox = [-1, -1];
-                });
-            }
-        }
-        // if ($scope.userid == $scope.gameData.Players[1] && ($scope.gameData.Turn == 10 + box || $scope.gameData.Turn == 19)) {
-        if ($scope.userid == $scope.gameData.Players[1]) {
-            if ($scope.boardArray[box].Squares[square] == 0) {
-                $scope.boardArray[box].Squares[square] = 5;
-                if ($scope.selectedBox[0] !== -1 && $scope.selectedBox[1] !== -1) {
-                    if ($scope.boardArray[$scope.selectedBox[0]].Squares[$scope.selectedBox[1]] == 5) {
-                        $scope.boardArray[$scope.selectedBox[0]].Squares[$scope.selectedBox[1]] = 0;
-                        $scope.loadIcon($scope.selectedBox[0], $scope.selectedBox[1])
-                    }
-                }
-                $scope.selectedBox = [box, square];
-            } else if ($scope.boardArray[box].Squares[square] == 5) {
-                $scope.boardArray[box].Squares[square] = 2;
-                $scope.makeMove(box, square).then(function(result) {
-                    $scope.getGame()
-                }, function(error) {
-                    $scope.boardArray[$scope.selectedBox[0]].Squares[$scope.selectedBox[1]] = 0;
-                    $scope.loadIcon($scope.selectedBox[0], $scope.selectedBox[1])
-                }).finally(function() {
-                    $scope.selectedBox = [-1, -1];
-                });
-            }
+    var setHash = function() {
+        var settings = {
+            'gameId': $scope.gameId,
+            'playerName': $scope.player['Name'],
+            // 'section': $scope.player['Section'],
+            'isAttacker': $scope.player['IsAttacker']
         }
 
-        return $scope.loadIcon(box, square);
+        $location.hash(JSON.stringify(settings));
     }
-
-    $scope.loadIcon = function(box, square) {
-        var canvas = document.getElementById("box" + box + "-" + square);
-        if (canvas === null) {
-            return
-        }
-        var context = canvas.getContext("2d");
-        if ($scope.boardArray[box].Squares[square] == 0) {
-            context.clearRect(0, 0, canvas.width, canvas.height);
-        } else if ($scope.boardArray[box].Squares[square] == 1) {
-            xImg.then(function(image) {
-                context.drawImage(image, 0, 0, canvas.width, canvas.height);
-            }, function(error) {
-                console.log("x failed to load")
-            })
-        } else if ($scope.boardArray[box].Squares[square] == 2) {
-            oImg.then(function(image) {
-                context.drawImage(image, 0, 0, canvas.width, canvas.height);
-            }, function(error) {
-                console.log("o failed to load")
-            })
-        } else if ($scope.boardArray[box].Squares[square] == 4) {
-            tealxImg.then(function(image) {
-                context.drawImage(image, 0, 0, canvas.width, canvas.height);
-            }, function(error) {
-                console.log("teal_x failed to load")
-            })
-        } else if ($scope.boardArray[box].Squares[square] == 5) {
-            redoImg.then(function(image) {
-                context.drawImage(image, 0, 0, canvas.width, canvas.height);
-            }, function(error) {
-                console.log("red_o failed to load")
-            })
-        }
-        // console.log("drew" + box + ", " + square);
-    }
-
-    $scope.loadAllImages = function() {
-        for (var i = 0; i < 9; i++) {
-            for (var j = 0; j < 9; j++) {
-                $scope.loadIcon(i, j);
-            }
-        }
-    }
-
-    function loadImage(src) {
-        return $q(function(resolve, reject) {
-            var image = new Image();
-            image.src = src;
-            image.onload = function() {
-                resolve(image);
-            };
-            image.onerror = function(e) {
-                reject(e);
-            };
-        })
-    }
-
-    $scope.$watch(function() {
-        return $window.innerWidth;
-    }, function(value) {
-        $scope.checkWidth()
-    });
-
-    $scope.checkWidth = function() {
-        if ($window.innerWidth < 650) {
-            $scope.boxSize = 25;
-            $scope.spaces = 2;
-        } else {
-            $scope.boxSize = 50;
-            $scope.spaces = 8;
-        }
-        $scope.loadAllImages();
-    }
-
 
     $scope.populateScope = function() {
-        $scope.gameid = $location.hash()
-        if ($scope.gameid == "") {
-            $location.path('/login')
-            return $q.reject("No ID")
+        if ($location.hash()) {
+            try {
+                var s = JSON.parse($location.hash())
+                $scope.gameId = s['gameId'];
+                $scope.playerName = s['playerName'];
+                $scope.sectionInput = s['section'];
+                if (!s['section']) {
+                    $scope.sectionInput = 1;
+                }
+                $scope.isAttackerInput = s['isAttacker'];
+                $scope.itemInput = s['item'];
+                if (typeof(s['item']) === 'undefined') {
+                    $scope.item = 0;
+                }
+                $scope.registerPlayer();
+            } catch (e) {
+                console.log("bad settings from hash")
+                return $q.reject();
+            }
         }
-
-        LoginService.checkLocalStorageLogin().then(function(creds) {
-            $scope.username = creds["Username"];
-            $scope.secret = creds["Secret"];
-            $scope.userid = creds["UserID"]
-
-            GameService.initws(
-                $scope.gameid,
-                function(data) {
-                    // console.log("websocket opened");
-                }, // open
-                function(data) {
-                    // console.log("websocket closed");
-                }, // close
-                function(data) {
-                    // console.log("game updated due to websocket update")
-                    $scope.getGame();
-                }, // change
-                function(data) {
-                    try {
-                        $scope.chats.push(data);
-                        $scope.$apply()
-                        // console.log('Receive chat data: ' + JSON.stringify(data));
-                        if (data["username"] !== $scope.username) {
-                            if (notificationSound && !$scope.muted) {
-                                notificationSound.play();
-                            }
-                        }
-
-                        if (!$scope.focused) {
-                            $scope.newChatName = data["username"];
-                            $scope.startTitleFlash();
-                        }
-
-                    } catch (error) {
-                        console.log('Receive chat error: ' + error);
-                    }
-                } // chat
-            )
-            $scope.refresh()
-        }, function(error) {
-            $location.path('/login')
-            return $q.reject("No Login")
-        })
+        return $q.resolve();
     }
 
-    $scope.startTitleFlash = function() {
-        showNewTitle();
+    $scope.startTitleFlash = function(flashText) {
+        if (!$scope.focused) {
+            $scope.newTitle = flashText;
+            showNewTitle();
+            $rootScope.faviconLink = $scope.alertFaviconLink; 
+        }
     }
 
     var showNewTitle = function() {
         if (!$scope.focused) {
-            $scope.title = $scope.newChatName + " messaged you";
-            $timeout(showOldTitle, 1000);
+            $scope.title = $scope.newTitle; 
+            $timeout(showOldTitle, 3000);
         }
     }
 
     var showOldTitle = function() {
         if (!$scope.focused) {
             $scope.title = $scope.oldTitle;
-            $timeout(showNewTitle, 1000);
+            $timeout(showNewTitle, 3000);
         }
     }
 
@@ -412,26 +316,15 @@ marktai.controller("GameCtl", ["$scope", "$rootScope", "$http", "$location", "$s
         $scope.focused = true;
         $scope.newChatName = "";
         $scope.title = $scope.oldTitle;
+        $rootScope.faviconLink = $scope.oldFaviconLink;
+        $scope.refresh();
     }).bind('blur', function() {
         $scope.focused = false;
     });
 
-    notificationSound = ngAudio.load("/sound/notification.mp3")
-    xImg = loadImage("/img/x.jpg");
-    oImg = loadImage("/img/o.jpg");
-    tealxImg = loadImage("/img/tealx.jpg");
-    redoImg = loadImage("/img/redo.jpg");
+    // notificationSound = ngAudio.load("/sound/notification.mp3")
 
-
-
-    $rootScope.checkLogin().then(
-        function(creds) {
-            $scope.populateScope()
-        },
-        function(error) {
-            $rootScope.sendToLogin();
-        }
-    );
+    $scope.populateScope();
 
 
 }])

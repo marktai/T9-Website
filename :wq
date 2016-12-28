@@ -1,0 +1,115 @@
+<!-- hmac-sha256 library -->
+<script
+  src="https://www.google.com/recaptcha/api.js?onload=vcRecaptchaApiLoaded&render=explicit"
+  async defer
+></script>
+
+
+<!-- Page Header -->
+<!-- Set your background image for this header on the line below. -->
+<!-- <header class="intro-header" style="background-image: url('https://www.marktai.com/img/lock-bg.png')">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+                <div class="page-heading">
+                    <h1>Meta Tic Tac Toe</h1>
+                    <hr class="small">
+                    <span class="subheading">こんにちは</span>
+                    <p class="post-meta"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</header> -->
+
+<!-- Post Content -->
+<article id='gameContainer'>
+    <div class="container">
+    
+        <title ng-disabled="title" ng-bind="title"/>
+
+        <div ng-bind="error"> </div>
+        </div>
+
+        <div ng-show = "playerId == -1">
+            <label for="gameId">Game ID: </label>
+            <input type="number" ng-model="gameId" placeholder="1" id="gameId"> <br/>
+
+            <label for="name">Player Name: </label>
+            <input type="text" ng-model="playerName" placeholder="Mark" id="name" ng-enter="updateHashWithRegister()"> <br/>
+
+            <label for="attacker">Attacker: </label>
+            <input type="checkbox" ng-model="isAttackerInput" id="attacker"> <br/>
+
+            <label for="item">Item: </label>
+            <select ng-model="item">
+              <option ng-repeat="(name, value) in items" value="{{value}}">{{name}}</option>
+            </select>
+
+            <button ng-click="updateHashWithRegister()" ng-disabled="playerName == ''">Register</button>
+        </div>
+
+        </div>
+        <div
+            ng-hide = "playerId == -1"
+            ng-cloak
+            resize
+        >
+            <br>
+            <div class = "row" >
+                <div class = "col-md-12 col-lg-8"> 
+                    <h2>Game {{gameId}} Health: {{gameData['Health']}}</h2>
+
+                    <div class = "row">
+                        <div 
+                            ng-repeat="id in [1,2,4,3]"
+                            class = "col-xs-6"
+                            style = "height: 200px;"
+                        >
+                            Section {{id}} (taking {{sections[id]['Damage']}} DPS)
+                            <button ng-click="makeMove(id)" class="btn btn-default" style="padding:2px 4px">Move to Section {{id}}</button>
+                            <ul>
+                              <ol ng-repeat="player in sections[id]['Players']" ng-bind="player['Name']" 
+                                ng-class="{bold: player['DoubledDown'], attacker: player['IsAttacker'], defender: !player['IsAttacker']}"
+                              ></ol>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class = "col-md-6 col-lg-4">
+                    <label for="moveSection">Destination Section: </label>
+                    <input type="number" ng-model="moveSection" placeholder="1" id="moveSection"> <br/>
+                    <button ng-click="makeMove(moveSection)" class="btn btn-default">Move</button>
+                    <button ng-click="makeMove(-1)" class="btn btn-default">Double Down</button>
+
+                    <br>
+                    <label for="actionTime">Action Cooldown: </label>
+                    <timer end-time="actionTime" id="actionTime">{{seconds}} seconds</timer>
+
+                    <label for="flashTime">Flash Cooldown: </label>
+                    <timer end-time="flashTime" id="flashTime"> {{seconds}} seconds</timer>
+
+                    <br>
+
+
+                    <button ng-click="refresh()" class="btn btn-default">Refresh</button>
+                    <button ng-click="resetHealth()" class="btn btn-default">Reset Health</button>
+                    <br><br>
+                    
+                    <div style="max-height:400px; min-height:40px; border:1px solid #ccc;overflow-y:scroll" scroll-glue>
+                        <h2>Chat</h2>
+                        <h5>Warning: Identity of chatters is not verified</h5>
+                        <hr>
+                        <p style="margin-top:0; margin-bottom:5px" ng-repeat = "chat in chats">{{chat.username + ": " + chat.text}}</p>
+                    </div>
+
+                    <select ng-model="selectedChannel">
+                      <option ng-repeat="(name, value) in channels" value="{{value}}">{{name}}</option>
+                    </select>
+                    <input type="text" ng-model="chatbox" ng-enter="sendChat()" id="chat"></input>
+                    <button ng-click="sendChat()" ng-disabled="chatbox === ''" class="btn btn-default">Send Chat</button>
+    				<br>
+                </div>
+            </div>
+    </div>
+</article>
