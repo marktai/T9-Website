@@ -8,12 +8,6 @@ marktai.controller("GameCtl", ["$scope", "$rootScope", "$http", "$location", "$s
     $scope.itemTupleInput = {};
 
     $scope.items = {};
-    GameService.items().then(function(items){
-        $scope.items = items;
-        $scope.itemTupleInput = {"Name": "Default", "Value": 0};
-    }, function(error){
-        console.log(error);
-    });
 
     $scope.playerId = -1;
 
@@ -71,6 +65,8 @@ marktai.controller("GameCtl", ["$scope", "$rootScope", "$http", "$location", "$s
     $scope.getGameSections = function() {
         return GameService.getGameSections($scope.gameId).then(function(sections) {
             $scope.sections = sections;
+            console.log($scope.sections);
+            console.log($scope.sections[0].players)
             return $q.resolve();
         }, function(error) {
             $scope.error = error;
@@ -116,52 +112,52 @@ marktai.controller("GameCtl", ["$scope", "$rootScope", "$http", "$location", "$s
         })
         $scope.getGameSections();
 
-        if (!websocketInitialized) {
-            GameService.initws(
-                $scope.gameId,
-                function(data) {
-                    console.log("websocket opened");
-                }, // open
-                function(data) {
-                    console.log("websocket closed");
-                    websocketInitialized = false;
-                }, // close
-                function(data) {
-                    /*console.log("game updated due to websocket update")*/
-                    $scope.refresh();
-                }, // change
-                function(chat) {
-                    try {
-                        var channel = chat['channel'];
-                        if (typeof(channel) === 'undefined' ||
-                            channel == $scope.channels['All'] ||
-                            ($scope.player['IsAttacker'] && channel == $scope.channels['Attackers']) ||
-                            (!$scope.player['IsAttacker'] && channel == $scope.channels['Defenders'])
-                        ){
-                            $scope.chats.push(chat);
-                            $scope.$apply()
-                            console.log('Receive chat data: ' + JSON.stringify(chat));
-                            if (chat["username"] !== $scope.username) {
-                                if (notificationSound && !$scope.muted) {
-                                    notificationSound.play();
-                                }
-                            }
+        // if (!websocketInitialized) {
+        //     GameService.initws(
+        //         $scope.gameId,
+        //         function(data) {
+        //             console.log("websocket opened");
+        //         }, // open
+        //         function(data) {
+        //             console.log("websocket closed");
+        //             websocketInitialized = false;
+        //         }, // close
+        //         function(data) {
+        //             /*console.log("game updated due to websocket update")*/
+        //             $scope.refresh();
+        //         }, // change
+        //         function(chat) {
+        //             try {
+        //                 var channel = chat['channel'];
+        //                 if (typeof(channel) === 'undefined' ||
+        //                     channel == $scope.channels['All'] ||
+        //                     ($scope.player['IsAttacker'] && channel == $scope.channels['Attackers']) ||
+        //                     (!$scope.player['IsAttacker'] && channel == $scope.channels['Defenders'])
+        //                 ){
+        //                     $scope.chats.push(chat);
+        //                     $scope.$apply()
+        //                     console.log('Receive chat data: ' + JSON.stringify(chat));
+        //                     if (chat["username"] !== $scope.username) {
+        //                         if (notificationSound && !$scope.muted) {
+        //                             notificationSound.play();
+        //                         }
+        //                     }
 
-                            if (!$scope.focused) {
-                                $scope.newChatName = chat["username"];
-                                $scope.startTitleFlash($scope.newChatName + " messaged you");
-                            }
-                        } else {
-                            console.log('Ignored chat data: ' + JSON.stringify(chat));
-                        }
+        //                     if (!$scope.focused) {
+        //                         $scope.newChatName = chat["username"];
+        //                         $scope.startTitleFlash($scope.newChatName + " messaged you");
+        //                     }
+        //                 } else {
+        //                     console.log('Ignored chat data: ' + JSON.stringify(chat));
+        //                 }
 
-                    } catch (error) {
-                        console.log('Receive chat error: ' + error);
-                    }
-                } // chat
-            );
-            websocketInitialized = true;
-        } 
+        //             } catch (error) {
+        //                 console.log('Receive chat error: ' + error);
+        //             }
+        //         } // chat
+        //     );
+        //     websocketInitialized = true;
+        // } 
     }
 
     $scope.updateHashWithRegister = function() {
@@ -182,15 +178,15 @@ marktai.controller("GameCtl", ["$scope", "$rootScope", "$http", "$location", "$s
 
         return $scope.getGame().then(function(success){
             var playerAlreadyInGame = false;
-            if ($scope.gameData && $scope.gameData['Players']) {
-                for (var key in $scope.gameData['Players']) {
-                    if (!$scope.gameData['Players'].hasOwnProperty(key)) {
+            if ($scope.gameData && $scope.gameData['players']) {
+                for (var key in $scope.gameData['players']) {
+                    if (!$scope.gameData['players'].hasOwnProperty(key)) {
                         continue;
                     }
 
-                    if ($scope.gameData['Players'][key].Name == $scope.playerName) {
+                    if ($scope.gameData['players'][key].name == $scope.playerName) {
                         playerAlreadyInGame = true;
-                        $scope.playerId = $scope.gameData['Players'][key]['ID'];
+                        $scope.playerId = $scope.gameData['players'][key]['id'];
                         break;
                     }
                 }
@@ -266,7 +262,27 @@ marktai.controller("GameCtl", ["$scope", "$rootScope", "$http", "$location", "$s
         $location.hash(JSON.stringify(settings));
     }
 
+    $scope.updateItems = function() {
+        var itemsPromise
+        if ($scope.isAttackerInput) {
+            itemsPromise = GameService.getAttackerItems();
+        } else {
+            itemsPromise = GameService.getDefenderItems();
+        }
+        itemsPromise.then(function(items){
+            $scope.items = items;
+            for (var i = 0; i < $scope.items.length; i++) {
+                $scope.items[i]["Name"] = $scope.items[i].name;
+                $scope.items[i]["Value"] = $scope.items[i].item_id;
+            }
+            $scope.itemTupleInput = {"Name": $scope.items[0]['Name'], "Value": $scope.items[0]['Value']}
+        }, function(error){
+            console.log(error);
+        })
+    }
+
     $scope.populateScope = function() {
+        $scope.updateItems();
         if ($location.hash()) {
             try {
                 var s = JSON.parse($location.hash())

@@ -1,51 +1,59 @@
 marktai.service("GameService", ["$http", "$q", "$localStorage", "$websocket", function($http, $q, $localStorage, $websocket) {
 
     var ws = null;
-    var items = [];
+    var defenderItems = [];
+    var attackerItems = [];
     var itemsSet = false;
-
-
-    this.getAllGames = function() {
-        var allGames = $http.get('./api/games').then(function(result) {
-            return $q.resolve(result.data["Games"])
-        }, function(error) {
-            return $q.reject(error.data["Error"])
-        })
-
-        return allGames;
-    }
 
     this.getGame = function(gameID) {
         var infoPromise = $http.get('./api/games/' + gameID + '/info').then(function(result) {
-            return $q.resolve(result.data["Game"])
+            return $q.resolve(result.data)
         }, function(error) {
-            return $q.reject(error.data["Error"])
+            return $q.reject(error.data)
         })
 
         return infoPromise;
     }
 
     this.getGameSections = function(gameID) {
-        var sectionPromise = $http.get('./api/games/' + gameID + '/sections').then(function(result) {
-            return $q.resolve(result.data["Sections"])
+        var sectionPromise = $http.get('./api/games/' + gameID + '/info').then(function(result) {
+            return $q.resolve(result.data["sections"])
         }, function(error) {
-            return $q.reject(error.data["Error"])
+            return $q.reject(error.data)
         })
         return sectionPromise;
     }
 
     this.makeMove = function(gameID, player, section) {
-        var urlWithoutT9 = '/games/' + gameID + '/move?Player=' + player + '&Section=' + section;
+        var urlWithoutT9 = '/games/' + gameID + '/players/' + player + '/move';
 
         var url = './api' + urlWithoutT9;
 
-        return $http.post(url).then(function(result) {
+        var data = {
+            'move_type': 'move_section',
+            'destination_id': section,
+        };
+        return $http.post(url, data).then(function(result) {
             return $q.resolve(result);
         }, function(error) {
-            return $q.reject(error.data["Error"]);
+            return $q.reject(error.data);
         })
     }
 
+    this.doubleDown = function(gameID, player) {
+        var urlWithoutT9 = '/games/' + gameID + '/players/' + player + '/move';
+
+        var url = './api' + urlWithoutT9;
+
+        var data = {
+            'move_type': 'double_down',
+        };
+        return $http.post(url, data).then(function(result) {
+            return $q.resolve(result);
+        }, function(error) {
+            return $q.reject(error.data);
+        })
+    }
 
     this.initws = function(gameid, open, close, change, chat) {
         ws = $websocket.$new({
@@ -89,19 +97,25 @@ marktai.service("GameService", ["$http", "$q", "$localStorage", "$websocket", fu
         var urlWithoutT9 = '/games';
         var url = './api' + urlWithoutT9;
         return $http.post(url).then(function(result) {
-            return $q.resolve(result.data["ID"]);
+            return $q.resolve(result.data["id"]);
         }, function(error) {
-            return $q.reject(error.data["Error"]);
+            return $q.reject(error.data);
         })
     }
 
     this.addPlayer = function(gameID, playerName, isAttacker, item, section) {
-        var urlWithoutT9 = '/games/' + gameID + '/player?Name=' + playerName + '&IsAttacker=' + (isAttacker ? 'true' : 'false') + '&Item=' + item + '&Section=' + section;
+        var urlWithoutT9 = '/games/' + gameID + '/players';
+        var data = {
+            'name': playerName,
+            'is_attacker': isAttacker,
+            'section_id': section,
+            'item_id': item,
+        };
         var url = './api' + urlWithoutT9;
-        return $http.post(url).then(function(result) {
-            return $q.resolve(result.data["PlayerID"]);
+        return $http.post(url, data).then(function(result) {
+            return $q.resolve(result.data["player_id"]);
         }, function(error) {
-            return $q.reject(error.data["Error"]);
+            return $q.reject(error.data);
         })
     }
 
@@ -111,25 +125,39 @@ marktai.service("GameService", ["$http", "$q", "$localStorage", "$websocket", fu
         return $http.post(url).then(function(result) {
             return $q.resolve();
         }, function(error) {
-            return $q.reject(error.data["Error"]);
+            return $q.reject(error.data);
         })
     }
 
-    this.items = function() {
+    this.getAttackerItems = function() {
         if (itemsSet) {
-            return $q.resolve(items);
+            return $q.resolve(attackerItems);
         }
 
         return $http.get('./api/items').then(function(result) {
-            for (key in result.data["Items"]) {
-                if (result.data["Items"].hasOwnProperty(key)){
-                    items.push({"Name": key, "Value": result.data["Items"][key]});
-                }
-            }
+            attackerItems = result.data['attacker_items'];
+            defenderItems = result.data['defender_items'];
             itemsSet = true;
-            return $q.resolve(items);
+            return $q.resolve(attackerItems);
         }, function(error) {
-            return $q.resolve(error.data["Error"]);
+            return $q.resolve(error.data);
+        });
+    }
+
+    this.getDefenderItems = function() {
+        if (itemsSet) {
+            return $q.resolve(defenderItems);
+        }
+
+        return $http.get('./api/items').then(function(result) {
+            console.log(result.data);
+            attackerItems = result.data['attacker_items'];
+            defenderItems = result.data['defender_items'];
+            console.log(defenderItems);
+            itemsSet = true;
+            return $q.resolve(defenderItems);
+        }, function(error) {
+            return $q.resolve(error.data);
         });
     }
 
